@@ -62,8 +62,17 @@ struct HistoryItemView: View {
                 monitor.copyAndPaste(item)
             } else {
                 monitor.copyToClipboard(item)
+                // 只有在非自动粘贴模式且不是独立窗口时才隐藏
+                // 但这里为了简化，我们让 Monitor 处理粘贴时的焦点
+                // 如果是单纯复制，不需要隐藏窗口
             }
-            NSApp.hide(nil)
+            
+            // 如果不是独立窗口模式，则隐藏
+            // 由于在这里很难直接判断 appDelegate 状态，我们依赖 pasteToFrontmostApp 的行为
+            // 但如果仅仅是复制，我们通常希望隐藏 Popover
+            if let delegate = NSApp.delegate as? AppDelegate, delegate.detachedWindow == nil {
+                NSApp.hide(nil)
+            }
         }
         .contextMenu {
             Button(action: {
@@ -72,7 +81,10 @@ struct HistoryItemView: View {
                 } else {
                     monitor.copyToClipboard(item)
                 }
-                NSApp.hide(nil)
+                
+                if let delegate = NSApp.delegate as? AppDelegate, delegate.detachedWindow == nil {
+                    NSApp.hide(nil)
+                }
             }) {
                 Label("复制并粘贴", systemImage: "doc.on.doc")
             }

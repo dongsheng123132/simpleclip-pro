@@ -18,12 +18,34 @@ let sizes: [(String, Int, Int)] = [
 // Adjust path to be relative to where the script is run (project root)
 let baseDir = FileManager.default.currentDirectoryPath + "/SimpleClip/Assets.xcassets/AppIcon.appiconset"
 
-// Helper to draw the icon
-func drawIcon(size: Double) -> NSImage {
-    let img = NSImage(size: NSSize(width: size, height: size))
-    img.lockFocus()
+// Helper to draw the icon directly to a bitmap of specific pixel size
+func generateIconData(pixels: Int) -> Data? {
+    let size = Double(pixels)
     
-    let ctx = NSGraphicsContext.current!.cgContext
+    // Create a bitmap representation with exact pixel dimensions
+    guard let rep = NSBitmapImageRep(
+        bitmapDataPlanes: nil,
+        pixelsWide: pixels,
+        pixelsHigh: pixels,
+        bitsPerSample: 8,
+        samplesPerPixel: 4,
+        hasAlpha: true,
+        isPlanar: false,
+        colorSpaceName: .deviceRGB,
+        bytesPerRow: 0,
+        bitsPerPixel: 0
+    ) else { return nil }
+    
+    // Create a graphics context from the bitmap
+    NSGraphicsContext.saveGraphicsState()
+    guard let nsContext = NSGraphicsContext(bitmapImageRep: rep) else { return nil }
+    NSGraphicsContext.current = nsContext
+    
+    let ctx = nsContext.cgContext
+    
+    // ------------------------------------------------------------
+    // Drawing Logic (Same as before, using 'size' as bounds)
+    // ------------------------------------------------------------
     
     // 1. Background (White Squircle)
     let rect = CGRect(x: 0, y: 0, width: size, height: size)
@@ -66,13 +88,12 @@ func drawIcon(size: Double) -> NSImage {
     ctx.setFillColor(NSColor(white: 0.95, alpha: 1.0).cgColor)
     ctx.fillPath()
     
-    // 4. Lines on Paper
+    // 4. Lines on Paper (Simple Rectangles)
     ctx.setFillColor(NSColor(white: 0.8, alpha: 1.0).cgColor)
     let lineH = paperH * 0.06
     let lineGap = paperH * 0.14
     let lineMargin = paperW * 0.15
     
-    // Wait, let's just use simple rectangles relative to paperRect
     for i in 0..<3 {
         let ly = paperY + paperH * 0.6 - (Double(i) * lineGap)
         let lineRect = CGRect(x: paperX + lineMargin, y: ly, width: paperW - 2 * lineMargin, height: lineH)
@@ -99,8 +120,11 @@ func drawIcon(size: Double) -> NSImage {
     let holeY = clipY + (clipH - holeSize) / 2
     ctx.fillEllipse(in: CGRect(x: holeX, y: holeY, width: holeSize, height: holeSize))
     
-    img.unlockFocus()
-    return img
+    // ------------------------------------------------------------
+    
+    NSGraphicsContext.restoreGraphicsState()
+    
+    return rep.representation(using: .png, properties: [:])
 }
 
 // Ensure directory exists
@@ -112,15 +136,13 @@ if !fileManager.fileExists(atPath: baseDir, isDirectory: &isDir) {
 
 // Generate Images
 for (filename, pointSize, scale) in sizes {
-    let targetSize = Double(pointSize * scale)
-    let img = drawIcon(size: targetSize)
-    
-    if let tiffData = img.tiffRepresentation,
-       let bitmap = NSBitmapImageRep(data: tiffData),
-       let pngData = bitmap.representation(using: .png, properties: [:]) {
+    let targetPixels = pointSize * scale
+    if let pngData = generateIconData(pixels: targetPixels) {
         let url = URL(fileURLWithPath: baseDir).appendingPathComponent(filename)
         try? pngData.write(to: url)
-        print("Generated: \(filename)")
+        print("Generated: \(filename) (\(targetPixels)x\(targetPixels))")
+    } else {
+        print("Failed to generate: \(filename)")
     }
 }
 

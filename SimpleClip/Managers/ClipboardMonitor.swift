@@ -3,11 +3,12 @@ import AppKit
 import Combine
 import ApplicationServices
 
-class ClipboardMonitor: ObservableObject {
+class ClipboardMonitor: NSObject, ObservableObject {
     @Published var items: [ClipboardItem] = []
     
     private var timer: Timer?
     private var lastChangeCount: Int
+    private var lastActiveApp: NSRunningApplication?
     
     // 从 UserDefaults 读取最大数量，默认 50
     private var maxItems: Int {
@@ -15,9 +16,25 @@ class ClipboardMonitor: ObservableObject {
         return saved > 0 ? saved : 50
     }
     
-    init() {
+    override init() {
         self.lastChangeCount = NSPasteboard.general.changeCount
+        super.init()
         loadHistory()
+        
+        // 监听应用切换，记录上一个活跃应用
+        NSWorkspace.shared.notificationCenter.addObserver(
+            self,
+            selector: #selector(handleAppActivation),
+            name: NSWorkspace.didActivateApplicationNotification,
+            object: nil
+        )
+    }
+    
+    @objc private func handleAppActivation(_ notification: Notification) {
+        if let app = notification.userInfo?[NSWorkspace.applicationUserInfoKey] as? NSRunningApplication,
+           app.bundleIdentifier != Bundle.main.bundleIdentifier {
+            lastActiveApp = app
+        }
     }
     
     // 开始监听
@@ -110,6 +127,17 @@ class ClipboardMonitor: ObservableObject {
     
     // 发送 Command+V 到前台应用（需要“辅助功能”权限）
     private func pasteToFrontmostApp() {
+        // 1. 尝试激活上一个应用
+        if let app = lastActiveApp {
+            app.activate(options: [])
+            // 给一点时间让窗口切换完成
+            usleep(100000) // 0.1秒
+        } else {
+            // 如果没有记录，尝试隐藏自己（回退方案）
+            NSApp.hide(nil)
+            usleep(100000)
+        }
+        
         guard let source = CGEventSource(stateID: .hidSystemState) else { return }
         let keyDown = CGEvent(keyboardEventSource: source, virtualKey: 9, keyDown: true) // 9 = V
         keyDown?.flags = .maskCommand
