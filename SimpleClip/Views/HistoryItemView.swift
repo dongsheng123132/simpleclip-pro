@@ -28,26 +28,26 @@ struct HistoryItemView: View {
             }
             
             // 内容区域
-            VStack(alignment: .leading, spacing: 4) {
-                Text(item.preview)
-                    .lineLimit(1) // 保持单行
-                    .truncationMode(.tail) // 尾部截断
-                    .font(.system(size: 13))
-                    .foregroundColor(.primary)
-                
+            Text(item.preview)
+                .lineLimit(2) // 改为2行
+                .truncationMode(.tail)
+                .font(.system(size: 13))
+                .foregroundColor(.primary)
+                .frame(maxWidth: .infinity, alignment: .leading)
+            
+            // 右侧信息：时间和图标
+            VStack(alignment: .trailing, spacing: 4) {
                 Text(item.timeAgo)
                     .font(.system(size: 10))
                     .foregroundColor(.secondary)
+                
+                if item.isPinned {
+                    Image(systemName: "pin.fill")
+                        .font(.system(size: 10))
+                        .foregroundColor(.blue)
+                }
             }
-            
-            Spacer()
-            
-            // 仅显示固定状态图标，删除等操作移至右键
-            if item.isPinned {
-                Image(systemName: "pin.fill")
-                    .font(.system(size: 10))
-                    .foregroundColor(.blue)
-            }
+            .layoutPriority(1)
         }
         .padding(.vertical, 8)
         .padding(.horizontal, 12)
@@ -75,26 +75,29 @@ struct HistoryItemView: View {
             }
         }
         .contextMenu {
+            Button(action: { showPreview = true }) {
+                Label("预览", systemImage: "doc.text.magnifyingglass")
+            }
+
             Button(action: {
                 if autoPaste {
                     monitor.copyAndPaste(item)
                 } else {
                     monitor.copyToClipboard(item)
                 }
-                
                 if let delegate = NSApp.delegate as? AppDelegate, delegate.detachedWindow == nil {
                     NSApp.hide(nil)
                 }
             }) {
                 Label("复制并粘贴", systemImage: "doc.on.doc")
             }
-            
+
             Divider()
-            
+
             Button(action: { monitor.togglePin(item) }) {
                 Label(item.isPinned ? "取消固定" : "固定", systemImage: item.isPinned ? "pin.slash" : "pin")
             }
-            
+
             Button(action: { monitor.deleteItem(item) }) {
                 Label("删除", systemImage: "trash")
             }

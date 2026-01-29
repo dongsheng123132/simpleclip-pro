@@ -1,64 +1,78 @@
 import SwiftUI
+import SwiftData
 
 struct PopoverView: View {
     @ObservedObject var monitor: ClipboardMonitor
+    @Query(sort: \ClipboardItem.timestamp, order: .reverse) private var allItems: [ClipboardItem]
     @State private var searchText = ""
     @State private var showSettings = false
     @State private var showClearConfirmation = false
-    
-    // 获取 AppDelegate 以调用 toggleDetachMode 和获取窗口实例
+    @State private var showDigest = false
+
+    /// 由 AppDelegate 传入，避免 Menu 内 NSApp.delegate 不可用导致点不开
+    var onOpenManager: ((String?) -> Void)?
+    var onToggleDetach: (() -> Void)?
+
     private var appDelegate: AppDelegate? {
         NSApp.delegate as? AppDelegate
     }
-    
-    // 检查是否处于独立窗口模式
+
     private var isDetached: Bool {
         appDelegate?.detachedWindow != nil
     }
-    
+
     var filteredItems: [ClipboardItem] {
-        let items: [ClipboardItem]
-        if searchText.isEmpty {
-            items = monitor.items
-        } else {
-            items = monitor.items.filter { $0.content.localizedCaseInsensitiveContains(searchText) }
-        }
-        
-        // 排序：固定项置顶，然后按时间倒序
-        return items.sorted { item1, item2 in
-            if item1.isPinned != item2.isPinned {
-                return item1.isPinned // 固定项排在前面
-            }
-            return item1.timestamp > item2.timestamp // 按时间倒序
+        let base = searchText.isEmpty ? allItems : allItems.filter { $0.content.localizedCaseInsensitiveContains(searchText) }
+        return base.sorted { item1, item2 in
+            if item1.isPinned != item2.isPinned { return item1.isPinned }
+            return item1.timestamp > item2.timestamp
         }
     }
     
     var body: some View {
         VStack(spacing: 0) {
-            // 顶部标题栏
+            // 顶部：极简标题 + 管理 + 更多
             HStack {
                 Text("SimpleClip")
                     .font(.headline)
-                    .fontWeight(.bold)
-                
+                    .fontWeight(.semibold)
+
                 Spacer()
-                
-                // 固定/独立窗口按钮
-                Button(action: {
-                    appDelegate?.toggleDetachMode()
-                }) {
-                    Image(systemName: isDetached ? "pin.fill" : "pin")
-                        .font(.system(size: 14))
-                        .foregroundColor(isDetached ? .blue : .primary)
-                }
-                .buttonStyle(.plain)
-                .help(isDetached ? "取消固定 (返回菜单栏模式)" : "固定在桌面顶层")
-                .padding(.trailing, 8)
-                
-                // 更多菜单
+
                 Menu {
+                    Button(action: {
+                        NSApp.activate(ignoringOtherApps: true)
+                        onOpenManager?(nil) ?? (NSApp.delegate as? AppDelegate)?.openManagerWindow()
+                    }) {
+                        Label("剪贴板管理", systemImage: "square.grid.2x2")
+                    }
+                    Button(action: {
+                        NSApp.activate(ignoringOtherApps: true)
+                        onOpenManager?("images") ?? (NSApp.delegate as? AppDelegate)?.openManagerWindow(initialCategory: "images")
+                    }) {
+                        Label("截图 / 图片库", systemImage: "photo.on.rectangle.angled")
+                    }
+                } label: {
+                    Label("管理", systemImage: "square.grid.2x2")
+                        .font(.system(size: 13))
+                }
+                .menuStyle(.borderlessButton)
+                .frame(minWidth: 44, minHeight: 28)
+                .contentShape(Rectangle())
+                .help("剪贴板管理 / 图片库")
+
+                Menu {
+                    Button(action: {
+                        onToggleDetach?() ?? appDelegate?.toggleDetachMode()
+                    }) {
+                        Label(isDetached ? "取消固定" : "固定到桌面", systemImage: isDetached ? "pin.slash" : "pin")
+                    }
+                    Button(action: { showDigest = true }) {
+                        Label("工作日报", systemImage: "doc.text.magnifyingglass")
+                    }
+                    Divider()
                     Button(action: { showSettings = true }) {
-                        Label("设置...", systemImage: "gearshape")
+                        Label("设置…", systemImage: "gearshape")
                     }
                     Divider()
                     Button(action: { NSApp.terminate(nil) }) {
@@ -66,11 +80,12 @@ struct PopoverView: View {
                     }
                 } label: {
                     Image(systemName: "ellipsis.circle")
-                        .font(.system(size: 16))
+                        .font(.system(size: 15))
                         .foregroundColor(.primary)
                 }
                 .menuStyle(.borderlessButton)
-                .fixedSize() // 防止 Menu 占用过多空间
+                .frame(minWidth: 36, minHeight: 28)
+                .contentShape(Rectangle())
             }
             .padding(.horizontal, 16)
             .padding(.vertical, 12)
@@ -155,9 +170,7 @@ struct PopoverView: View {
             .padding(8)
             .background(Color(NSColor.controlBackgroundColor))
             
-            // 设置弹窗（隐藏的触发器，通过状态控制）
-            // 注意：popover 只能依附于视图，这里我们把它依附在底部工具栏或整个视图上
-            // 为了避免布局问题，可以使用 background 挂载
+            // 设置弹窗
             .background(
                 Color.clear
                     .popover(isPresented: $showSettings) {
@@ -165,7 +178,13 @@ struct PopoverView: View {
                     }
             )
         }
-        .frame(minWidth: 400, minHeight: 500) // 使用 min 尺寸，允许拉伸
+        .frame(minWidth: 400, minHeight: 500)
+        .sheet(isPresented: $showDigest) {
+            DailyDigestView(
+                onGenerate: { appDelegate?.summaryService?.tryEnsureTodayDigest() },
+                onRegenerateToday: { appDelegate?.summaryService?.forceRegenerateTodayDigest() }
+            )
+        }
     }
 }
 

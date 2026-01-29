@@ -2,26 +2,19 @@ import Foundation
 import AppKit
 import Combine
 import ApplicationServices
+import SwiftData
 
 class ClipboardMonitor: NSObject, ObservableObject {
-    @Published var items: [ClipboardItem] = []
-    
     private var timer: Timer?
     private var lastChangeCount: Int
     private var lastActiveApp: NSRunningApplication?
-    
-    // 从 UserDefaults 读取最大数量，默认 50
-    private var maxItems: Int {
-        let saved = UserDefaults.standard.integer(forKey: "maxHistoryItems")
-        return saved > 0 ? saved : 50
-    }
-    
-    override init() {
+    private let modelContext: ModelContext
+
+    init(modelContext: ModelContext) {
+        self.modelContext = modelContext
         self.lastChangeCount = NSPasteboard.general.changeCount
         super.init()
-        loadHistory()
-        
-        // 监听应用切换，记录上一个活跃应用
+
         NSWorkspace.shared.notificationCenter.addObserver(
             self,
             selector: #selector(handleAppActivation),
@@ -29,83 +22,72 @@ class ClipboardMonitor: NSObject, ObservableObject {
             object: nil
         )
     }
-    
+
     @objc private func handleAppActivation(_ notification: Notification) {
         if let app = notification.userInfo?[NSWorkspace.applicationUserInfoKey] as? NSRunningApplication,
            app.bundleIdentifier != Bundle.main.bundleIdentifier {
             lastActiveApp = app
         }
     }
-    
-    // 开始监听
+
     func startMonitoring() {
-        // 确保在主线程上运行 Timer
+        // 使用 RunLoop.main 确保 Timer 在主线程运行，且使用 common 模式避免滑动时停止
         DispatchQueue.main.async {
-            self.timer = Timer.scheduledTimer(withTimeInterval: 0.5, repeats: true) { [weak self] _ in
-                self?.checkClipboard()
+            self.timer = Timer(timeInterval: 0.5, repeats: true) { [weak self] _ in
+                // 确保在主线程执行检查，虽然 Timer 通常在主线程，但双重保险更安全
+                Task { @MainActor [weak self] in
+                    self?.checkClipboard()
+                }
+            }
+            if let timer = self.timer {
+                RunLoop.main.add(timer, forMode: .common)
             }
         }
     }
-    
-    // 停止监听
+
     func stopMonitoring() {
         timer?.invalidate()
         timer = nil
     }
-    
-    // 检查剪贴板变化
+
     private func checkClipboard() {
         let currentChangeCount = NSPasteboard.general.changeCount
-        
         guard currentChangeCount != lastChangeCount else { return }
-        
         lastChangeCount = currentChangeCount
-        
         let pasteboard = NSPasteboard.general
-        
-        // 处理文本
+
         if let string = pasteboard.string(forType: .string), !string.isEmpty {
-            // 检查是否是 URL
             if let url = URL(string: string), url.scheme != nil {
                 addItem(ClipboardItem(content: string, type: .url))
             } else {
                 addItem(ClipboardItem(content: string, type: .text))
             }
-        }
-        // 处理图片
-        else if let image = pasteboard.data(forType: .tiff) {
-            // 保存图片到本地
-            if let imagePath = saveImage(image) {
-                addItem(ClipboardItem(content: imagePath, type: .image))
-            }
+        } else if let image = pasteboard.data(forType: .tiff), let imagePath = saveImage(image) {
+            addItem(ClipboardItem(content: imagePath, type: .image))
         }
     }
-    
-    // 添加新项目
+
     private func addItem(_ item: ClipboardItem) {
-        // 避免重复
-        if let lastItem = items.first, lastItem.content == item.content {
+        // 确保在主线程操作 ModelContext
+        if !Thread.isMainThread {
+            Task { @MainActor in
+                addItem(item)
+            }
             return
         }
         
-        items.insert(item, at: 0)
-        
-        // 限制数量（保留固定项）
-        let pinnedItems = items.filter { $0.isPinned }
-        let unpinnedItems = items.filter { !$0.isPinned }
-        
-        if unpinnedItems.count > maxItems {
-            items = pinnedItems + Array(unpinnedItems.prefix(maxItems))
+        var descriptor = FetchDescriptor<ClipboardItem>(sortBy: [SortDescriptor(\.timestamp, order: .reverse)])
+        descriptor.fetchLimit = 1
+        if let lastItem = try? modelContext.fetch(descriptor).first, lastItem.content == item.content {
+            return
         }
-        
-        saveHistory()
+        modelContext.insert(item)
+        try? modelContext.save()
     }
-    
-    // 复制到剪贴板
+
     func copyToClipboard(_ item: ClipboardItem) {
         let pasteboard = NSPasteboard.general
         pasteboard.clearContents()
-        
         switch item.type {
         case .text, .url:
             pasteboard.setString(item.content, forType: .string)
@@ -114,93 +96,64 @@ class ClipboardMonitor: NSObject, ObservableObject {
                 pasteboard.writeObjects([image])
             }
         }
-        
-        // 更新 changeCount 避免重复记录
         lastChangeCount = NSPasteboard.general.changeCount
     }
-    
-    // 复制并自动粘贴到前台应用
+
     func copyAndPaste(_ item: ClipboardItem) {
         copyToClipboard(item)
         pasteToFrontmostApp()
     }
-    
-    // 发送 Command+V 到前台应用（需要“辅助功能”权限）
+
     private func pasteToFrontmostApp() {
-        // 1. 尝试激活上一个应用
         if let app = lastActiveApp {
             app.activate(options: [])
-            // 给一点时间让窗口切换完成
-            usleep(100000) // 0.1秒
+            usleep(100000)
         } else {
-            // 如果没有记录，尝试隐藏自己（回退方案）
             NSApp.hide(nil)
             usleep(100000)
         }
-        
         guard let source = CGEventSource(stateID: .hidSystemState) else { return }
-        let keyDown = CGEvent(keyboardEventSource: source, virtualKey: 9, keyDown: true) // 9 = V
+        let keyDown = CGEvent(keyboardEventSource: source, virtualKey: 9, keyDown: true)
         keyDown?.flags = .maskCommand
         let keyUp = CGEvent(keyboardEventSource: source, virtualKey: 9, keyDown: false)
         keyUp?.flags = .maskCommand
         keyDown?.post(tap: .cghidEventTap)
         keyUp?.post(tap: .cghidEventTap)
     }
-    
-    // 删除项目
+
     func deleteItem(_ item: ClipboardItem) {
-        items.removeAll { $0.id == item.id }
-        saveHistory()
+        modelContext.delete(item)
+        try? modelContext.save()
     }
-    
-    // 切换固定状态
+
     func togglePin(_ item: ClipboardItem) {
-        if let index = items.firstIndex(where: { $0.id == item.id }) {
-            items[index].isPinned.toggle()
-            saveHistory()
+        item.isPinned.toggle()
+        try? modelContext.save()
+    }
+
+    func clearHistory() {
+        do {
+            try modelContext.delete(model: ClipboardItem.self, where: #Predicate { !$0.isPinned })
+            try modelContext.save()
+        } catch {
+            print("Failed to clear history: \(error)")
         }
     }
-    
-    // 清空历史（保留固定项）
-    func clearHistory() {
-        items = items.filter { $0.isPinned }
-        saveHistory()
-    }
-    
-    // 保存图片
+
     private func saveImage(_ imageData: Data) -> String? {
         let fileManager = FileManager.default
-        let appSupport = fileManager.urls(for: .applicationSupportDirectory, in: .userDomainMask).first!
+        guard let appSupport = fileManager.urls(for: .applicationSupportDirectory, in: .userDomainMask).first else { return nil }
         let clipboardDir = appSupport.appendingPathComponent("SimpleClip/Images")
-        
         try? fileManager.createDirectory(at: clipboardDir, withIntermediateDirectories: true)
-        
         let filename = "\(UUID().uuidString).png"
         let filePath = clipboardDir.appendingPathComponent(filename)
-        
         if let image = NSImage(data: imageData),
-           let pngData = image.tiffRepresentation,
-           let bitmap = NSBitmapImageRep(data: pngData),
-           let data = bitmap.representation(using: .png, properties: [:]) {
-            try? data.write(to: filePath)
+           let tiffData = image.tiffRepresentation,
+           let bitmap = NSBitmapImageRep(data: tiffData),
+           let pngData = bitmap.representation(using: .png, properties: [:]) {
+            try? pngData.write(to: filePath)
             return filePath.path
         }
-        
         return nil
-    }
-    
-    // 持久化保存
-    private func saveHistory() {
-        if let encoded = try? JSONEncoder().encode(items) {
-            UserDefaults.standard.set(encoded, forKey: "clipboardHistory")
-        }
-    }
-    
-    // 加载历史
-    private func loadHistory() {
-        if let data = UserDefaults.standard.data(forKey: "clipboardHistory"),
-           let decoded = try? JSONDecoder().decode([ClipboardItem].self, from: data) {
-            items = decoded
-        }
     }
 }
