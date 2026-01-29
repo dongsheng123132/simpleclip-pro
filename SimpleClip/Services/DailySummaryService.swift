@@ -28,13 +28,14 @@ final class DailySummaryService {
             return
         }
 
-        // 获取当日剪贴项（仅文本与 URL）
+        let startOfTomorrow = calendar.date(byAdding: .day, value: 1, to: startOfToday) ?? startOfToday
         let itemDescriptor = FetchDescriptor<ClipboardItem>(
-            sortBy: [SortDescriptor(\.timestamp, order: .reverse)]
+            predicate: #Predicate<ClipboardItem> { item in
+                item.timestamp >= startOfToday && item.timestamp < startOfTomorrow && (item.type == .text || item.type == .url)
+            },
+            sortBy: []
         )
-        guard let allItems = try? modelContext.fetch(itemDescriptor) else { return }
-        let todayItems = allItems.filter { calendar.isDate($0.timestamp, inSameDayAs: Date()) }
-        let textAndUrlItems = todayItems.filter { $0.type == .text || $0.type == .url }
+        guard let textAndUrlItems = try? modelContext.fetch(itemDescriptor) else { return }
         let itemCount = textAndUrlItems.count
         
         if itemCount == 0 {

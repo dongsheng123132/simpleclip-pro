@@ -132,7 +132,7 @@ struct ManagerListItemView: View {
         HStack(alignment: .top) {
             // 左侧图标或缩略图
             Group {
-                if item.type == .image, let image = NSImage(contentsOfFile: item.content) {
+                if item.type == .image, let image = ManagerListItemView.downsampledImage(at: item.content, maxPixel: 200) {
                     Image(nsImage: image)
                         .resizable()
                         .aspectRatio(contentMode: .fill)
@@ -224,6 +224,24 @@ struct ManagerListItemView: View {
                 p.writeObjects([image])
             }
         }
+    }
+}
+
+extension ManagerListItemView {
+    static private var cache = NSCache<NSString, NSImage>()
+    static func downsampledImage(at path: String, maxPixel: CGFloat) -> NSImage? {
+        if let cached = cache.object(forKey: path as NSString) { return cached }
+        guard let data = try? Data(contentsOf: URL(fileURLWithPath: path)) else { return nil }
+        guard let source = CGImageSourceCreateWithData(data as CFData, nil) else { return nil }
+        let options: [CFString: Any] = [
+            kCGImageSourceCreateThumbnailFromImageAlways: true,
+            kCGImageSourceThumbnailMaxPixelSize: Int(maxPixel),
+            kCGImageSourceShouldCache: false
+        ]
+        guard let cgThumb = CGImageSourceCreateThumbnailAtIndex(source, 0, options as CFDictionary) else { return nil }
+        let thumb = NSImage(cgImage: cgThumb, size: NSSize(width: cgThumb.width, height: cgThumb.height))
+        cache.setObject(thumb, forKey: path as NSString)
+        return thumb
     }
 }
 

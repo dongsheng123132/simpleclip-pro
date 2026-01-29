@@ -1,6 +1,7 @@
 import Foundation
 import AppKit
 import SwiftData
+import CryptoKit
 
 enum ClipboardType: String, Codable {
     case text
@@ -11,10 +12,11 @@ enum ClipboardType: String, Codable {
 @Model
 final class ClipboardItem: Identifiable {
     @Attribute(.unique) var id: UUID
-    var content: String          // 文本内容或图片路径
+    var content: String
     var type: ClipboardType
     var timestamp: Date
-    var isPinned: Bool           // 是否固定
+    var isPinned: Bool
+    @Attribute(.unique) var contentHash: String
 
     init(content: String, type: ClipboardType) {
         self.id = UUID()
@@ -22,6 +24,7 @@ final class ClipboardItem: Identifiable {
         self.type = type
         self.timestamp = Date()
         self.isPinned = false
+        self.contentHash = Self.sha256Hex(content)
     }
 
     // 显示用的预览文本（不持久化）
@@ -39,5 +42,11 @@ final class ClipboardItem: Identifiable {
         let formatter = RelativeDateTimeFormatter()
         formatter.unitsStyle = .short
         return formatter.localizedString(for: timestamp, relativeTo: Date())
+    }
+
+    private static func sha256Hex(_ s: String) -> String {
+        let data = Data(s.utf8)
+        let digest = SHA256.hash(data: data)
+        return digest.compactMap { String(format: "%02x", $0) }.joined()
     }
 }

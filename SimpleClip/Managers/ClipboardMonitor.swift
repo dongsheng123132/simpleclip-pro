@@ -31,14 +31,13 @@ class ClipboardMonitor: NSObject, ObservableObject {
     }
 
     func startMonitoring() {
-        // 使用 RunLoop.main 确保 Timer 在主线程运行，且使用 common 模式避免滑动时停止
         DispatchQueue.main.async {
-            self.timer = Timer(timeInterval: 0.5, repeats: true) { [weak self] _ in
-                // 确保在主线程执行检查，虽然 Timer 通常在主线程，但双重保险更安全
+            self.timer = Timer(timeInterval: 1.0, repeats: true) { [weak self] _ in
                 Task { @MainActor [weak self] in
                     self?.checkClipboard()
                 }
             }
+            self.timer?.tolerance = 0.5
             if let timer = self.timer {
                 RunLoop.main.add(timer, forMode: .common)
             }
@@ -76,11 +75,12 @@ class ClipboardMonitor: NSObject, ObservableObject {
             return
         }
         
-        var descriptor = FetchDescriptor<ClipboardItem>(sortBy: [SortDescriptor(\.timestamp, order: .reverse)])
+        var descriptor = FetchDescriptor<ClipboardItem>(
+            predicate: #Predicate { $0.contentHash == item.contentHash },
+            sortBy: []
+        )
         descriptor.fetchLimit = 1
-        if let lastItem = try? modelContext.fetch(descriptor).first, lastItem.content == item.content {
-            return
-        }
+        if (try? modelContext.fetch(descriptor).first) != nil { return }
         modelContext.insert(item)
         try? modelContext.save()
     }
