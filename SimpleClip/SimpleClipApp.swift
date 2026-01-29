@@ -147,8 +147,17 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     @objc func togglePopover(_ sender: Any?) {
         // 检查是否是右键点击
         if let event = NSApp.currentEvent, event.type == .rightMouseUp {
-            // 右键点击逻辑（可选，目前保持默认行为或添加特定菜单）
-            // 这里我们保持统一行为
+            // 右键显示菜单
+            let menu = NSMenu()
+            
+            menu.addItem(NSMenuItem(title: "打开管理界面", action: #selector(openManager), keyEquivalent: "m"))
+            menu.addItem(NSMenuItem.separator())
+            menu.addItem(NSMenuItem(title: "退出 SimpleClip", action: #selector(quitApp), keyEquivalent: "q"))
+            
+            statusItem?.menu = menu
+            statusItem?.button?.performClick(nil)
+            statusItem?.menu = nil // 点击后清除，恢复左键点击行为
+            return
         }
         
         if let button = statusItem?.button {
@@ -165,6 +174,14 @@ class AppDelegate: NSObject, NSApplicationDelegate {
                 }
             }
         }
+    }
+    
+    @objc func openManager() {
+        openManagerWindow()
+    }
+    
+    @objc func quitApp() {
+        NSApplication.shared.terminate(nil)
     }
     
     func toggleDetachMode() {

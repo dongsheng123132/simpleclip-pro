@@ -36,9 +36,23 @@ struct SettingsView: View {
                         monitor.clearHistory()
                     }
                     .foregroundColor(.red)
+                }
 
-                    Button("退出 SimpleClip") {
+                Section(header: Text("关于")) {
+                    HStack {
+                        Text("版本")
+                        Spacer()
+                        Text("1.1 (AI Features)")
+                            .foregroundColor(.secondary)
+                    }
+                    Button(action: {
                         NSApplication.shared.terminate(nil)
+                    }) {
+                        HStack {
+                            Image(systemName: "power")
+                            Text("退出程序")
+                        }
+                        .foregroundColor(.red)
                     }
                 }
             }
