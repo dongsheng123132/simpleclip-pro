@@ -302,8 +302,10 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         }
         let interval = next.timeIntervalSinceNow
         dailyDigestTimer = Timer.scheduledTimer(withTimeInterval: max(interval, 60), repeats: false) { [weak self] _ in
-            self?.summaryService?.tryEnsureTodayDigest()
-            self?.rescheduleDailyDigestTimer()
+            Task { @MainActor in
+                self?.summaryService?.tryEnsureTodayDigest()
+                self?.rescheduleDailyDigestTimer()
+            }
         }
         RunLoop.main.add(dailyDigestTimer!, forMode: .common)
     }
@@ -320,8 +322,10 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         let next = calendar.date(byAdding: .day, value: 1, to: calendar.date(from: components) ?? Date()) ?? Date()
         let interval = next.timeIntervalSinceNow
         dailyDigestTimer = Timer.scheduledTimer(withTimeInterval: interval, repeats: false) { [weak self] _ in
-            self?.summaryService?.tryEnsureTodayDigest()
-            self?.rescheduleDailyDigestTimer()
+            Task { @MainActor in
+                self?.summaryService?.tryEnsureTodayDigest()
+                self?.rescheduleDailyDigestTimer()
+            }
         }
         RunLoop.main.add(dailyDigestTimer!, forMode: .common)
     }

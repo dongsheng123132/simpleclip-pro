@@ -4,7 +4,8 @@ import Combine
 import ApplicationServices
 import SwiftData
 
-class ClipboardMonitor: NSObject, ObservableObject {
+@MainActor
+final class ClipboardMonitor: NSObject, ObservableObject {
     private var timer: Timer?
     private var lastChangeCount: Int
     private var lastActiveApp: NSRunningApplication?
@@ -31,17 +32,12 @@ class ClipboardMonitor: NSObject, ObservableObject {
     }
 
     func startMonitoring() {
-        DispatchQueue.main.async {
-            self.timer = Timer(timeInterval: 1.0, repeats: true) { [weak self] _ in
-                Task { @MainActor [weak self] in
-                    self?.checkClipboard()
-                }
-            }
-            self.timer?.tolerance = 0.5
-            if let timer = self.timer {
-                RunLoop.main.add(timer, forMode: .common)
+        timer = Timer.scheduledTimer(withTimeInterval: 1.0, repeats: true) { [weak self] _ in
+            Task { @MainActor [weak self] in
+                await self?.checkClipboard()
             }
         }
+        timer?.tolerance = 0.5
     }
 
     func stopMonitoring() {
@@ -49,16 +45,11 @@ class ClipboardMonitor: NSObject, ObservableObject {
         timer = nil
     }
 
-    private func checkClipboard() {
+    private func checkClipboard() async {
         let currentChangeCount = NSPasteboard.general.changeCount
         guard currentChangeCount != lastChangeCount else { return }
         lastChangeCount = currentChangeCount
         let pasteboard = NSPasteboard.general
-
-        // 调试：打印所有可用的类型
-        if let types = pasteboard.types {
-            NSLog("📋 剪贴板类型: \(types.map { $0.rawValue })")
-        }
 
         // 尝试多种方式读取字符串内容
         var content: String? = nil
@@ -66,12 +57,10 @@ class ClipboardMonitor: NSObject, ObservableObject {
         // 1. 优先尝试读取普通字符串
         if let string = pasteboard.string(forType: .string), !string.isEmpty {
             content = string
-            NSLog("📋 从 .string 读取: \(String(string.prefix(100)))")
         }
         // 2. 尝试读取 URL 类型
         else if let urlString = pasteboard.string(forType: .URL), !urlString.isEmpty {
             content = urlString
-            NSLog("📋 从 .URL 读取: \(String(urlString.prefix(100)))")
         }
         // 3. 尝试读取 public.url
         else if let types = pasteboard.types {
@@ -81,7 +70,6 @@ class ClipboardMonitor: NSObject, ObservableObject {
                        let string = String(data: data, encoding: .utf8) ?? String(data: data, encoding: .ascii),
                        !string.isEmpty {
                         content = string
-                        NSLog("📋 从 \(type.rawValue) 读取: \(String(string.prefix(100)))")
                         break
                     }
                 }
@@ -91,29 +79,14 @@ class ClipboardMonitor: NSObject, ObservableObject {
         // 处理文本/URL
         if let string = content {
             let trimmed = string.trimmingCharacters(in: .whitespacesAndNewlines)
-            guard !trimmed.isEmpty else {
-                NSLog("⚠️ 内容为空（仅空白字符）")
-                return
-            }
+            guard !trimmed.isEmpty else { return }
             
-            // 更完善的 URL 检测
             let type: ClipboardType = isValidURL(trimmed) ? .url : .text
-            NSLog("📋 判定类型: \(type)")
-            
-            let newItem = ClipboardItem(content: trimmed, type: type)
-            Task { @MainActor in
-                addItem(newItem)
-            }
+            await addItem(ClipboardItem(content: trimmed, type: type))
         }
         // 处理图片
         else if let image = pasteboard.data(forType: .tiff), let imagePath = saveImage(image) {
-            NSLog("📋 检测到图片: \(imagePath)")
-            let newItem = ClipboardItem(content: imagePath, type: .image)
-            Task { @MainActor in
-                addItem(newItem)
-            }
-        } else {
-            NSLog("⚠️ 未能识别的剪贴板内容")
+            await addItem(ClipboardItem(content: imagePath, type: .image))
         }
     }
     
@@ -142,10 +115,8 @@ class ClipboardMonitor: NSObject, ObservableObject {
         return false
     }
 
-    @MainActor
-    private func addItem(_ item: ClipboardItem) {
-        let hashValue: String = item.contentHash
-        NSLog("🔍 检查重复 - hash: \(hashValue.prefix(16))..., 内容: \(String(item.content.prefix(50)))")
+    private func addItem(_ item: ClipboardItem) async {
+        let hashValue = item.contentHash
         
         var descriptor = FetchDescriptor<ClipboardItem>(
             predicate: #Predicate<ClipboardItem> { row in row.contentHash == hashValue },
@@ -156,15 +127,12 @@ class ClipboardMonitor: NSObject, ObservableObject {
         do {
             if let existing = try modelContext.fetch(descriptor).first {
                 // 重复内容：更新时间戳，置顶显示
-                // 使用主 actor 隔离确保线程安全
                 existing.timestamp = Date()
                 try modelContext.save()
-                NSLog("🔄 重复内容已更新置顶: \(existing.content.prefix(50))")
                 return
             }
             modelContext.insert(item)
             try modelContext.save()
-            NSLog("✅ 已保存新项目: \(String(item.content.prefix(50)))")
         } catch {
             NSLog("❌ 添加剪贴项失败: \(error.localizedDescription)")
         }
@@ -180,11 +148,7 @@ class ClipboardMonitor: NSObject, ObservableObject {
             if FileManager.default.fileExists(atPath: item.content) {
                 if let image = NSImage(contentsOfFile: item.content) {
                     pasteboard.writeObjects([image])
-                } else {
-                    NSLog("⚠️ 图片已存在但无法加载: \(item.content)")
                 }
-            } else {
-                NSLog("⚠️ 图片文件不存在: \(item.content)")
             }
         }
         lastChangeCount = NSPasteboard.general.changeCount
@@ -227,7 +191,6 @@ class ClipboardMonitor: NSObject, ObservableObject {
             try modelContext.save()
         } catch {
             NSLog("❌ 更新固定状态失败: \(error.localizedDescription)")
-            // 回滚状态
             item.isPinned.toggle()
         }
     }
@@ -244,53 +207,30 @@ class ClipboardMonitor: NSObject, ObservableObject {
     private func saveImage(_ imageData: Data) -> String? {
         let fileManager = FileManager.default
         
-        // 获取应用支持目录
         guard let appSupport = fileManager.urls(for: .applicationSupportDirectory, in: .userDomainMask).first else {
-            NSLog("❌ 无法获取 Application Support 目录")
             return nil
         }
         
         let clipboardDir = appSupport.appendingPathComponent("SimpleClip/Images")
         
-        // 创建目录并处理错误
         do {
             try fileManager.createDirectory(at: clipboardDir, withIntermediateDirectories: true)
         } catch {
-            NSLog("❌ 创建图片目录失败: \(error.localizedDescription)")
             return nil
         }
         
         let filename = "\(UUID().uuidString).png"
         let filePath = clipboardDir.appendingPathComponent(filename)
         
-        // 验证图片数据
-        guard let image = NSImage(data: imageData) else {
-            NSLog("⚠️ 无效的图片数据")
-            return nil
-        }
+        guard let image = NSImage(data: imageData) else { return nil }
+        guard let tiffData = image.tiffRepresentation else { return nil }
+        guard let bitmap = NSBitmapImageRep(data: tiffData) else { return nil }
+        guard let pngData = bitmap.representation(using: .png, properties: [:]) else { return nil }
         
-        guard let tiffData = image.tiffRepresentation else {
-            NSLog("⚠️ 无法获取 TIFF 表示")
-            return nil
-        }
-        
-        guard let bitmap = NSBitmapImageRep(data: tiffData) else {
-            NSLog("⚠️ 无法创建位图表示")
-            return nil
-        }
-        
-        guard let pngData = bitmap.representation(using: .png, properties: [:]) else {
-            NSLog("⚠️ 无法转换为 PNG 格式")
-            return nil
-        }
-        
-        // 写入文件并处理错误
         do {
             try pngData.write(to: filePath)
-            NSLog("✅ 图片已保存: \(filePath.path)")
             return filePath.path
         } catch {
-            NSLog("❌ 保存图片失败: \(error.localizedDescription)")
             return nil
         }
     }
