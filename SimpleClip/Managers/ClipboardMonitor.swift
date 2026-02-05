@@ -100,12 +100,18 @@ class ClipboardMonitor: NSObject, ObservableObject {
             let type: ClipboardType = isValidURL(trimmed) ? .url : .text
             NSLog("📋 判定类型: \(type)")
             
-            addItem(ClipboardItem(content: trimmed, type: type))
+            let newItem = ClipboardItem(content: trimmed, type: type)
+            Task { @MainActor in
+                addItem(newItem)
+            }
         }
         // 处理图片
         else if let image = pasteboard.data(forType: .tiff), let imagePath = saveImage(image) {
             NSLog("📋 检测到图片: \(imagePath)")
-            addItem(ClipboardItem(content: imagePath, type: .image))
+            let newItem = ClipboardItem(content: imagePath, type: .image)
+            Task { @MainActor in
+                addItem(newItem)
+            }
         } else {
             NSLog("⚠️ 未能识别的剪贴板内容")
         }
@@ -136,15 +142,8 @@ class ClipboardMonitor: NSObject, ObservableObject {
         return false
     }
 
+    @MainActor
     private func addItem(_ item: ClipboardItem) {
-        // 确保在主线程操作 ModelContext
-        if !Thread.isMainThread {
-            Task { @MainActor in
-                addItem(item)
-            }
-            return
-        }
-        
         let hashValue: String = item.contentHash
         NSLog("🔍 检查重复 - hash: \(hashValue.prefix(16))..., 内容: \(String(item.content.prefix(50)))")
         
@@ -157,6 +156,7 @@ class ClipboardMonitor: NSObject, ObservableObject {
         do {
             if let existing = try modelContext.fetch(descriptor).first {
                 // 重复内容：更新时间戳，置顶显示
+                // 使用主 actor 隔离确保线程安全
                 existing.timestamp = Date()
                 try modelContext.save()
                 NSLog("🔄 重复内容已更新置顶: \(existing.content.prefix(50))")

@@ -6,6 +6,7 @@ import UserNotifications
 import FoundationModels
 #endif
 
+@MainActor
 final class DailySummaryService {
     private let modelContext: ModelContext
 
