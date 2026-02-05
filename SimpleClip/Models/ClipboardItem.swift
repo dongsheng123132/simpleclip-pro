@@ -2,6 +2,8 @@ import Foundation
 import AppKit
 import SwiftData
 import CryptoKit
+import QuickLook
+import UniformTypeIdentifiers
 
 enum ClipboardType: String, Codable {
     case text
@@ -16,7 +18,7 @@ final class ClipboardItem: Identifiable {
     var type: ClipboardType
     var timestamp: Date
     var isPinned: Bool
-    @Attribute(.unique) var contentHash: String
+    var contentHash: String
 
     init(content: String, type: ClipboardType) {
         self.id = UUID()
@@ -49,4 +51,38 @@ final class ClipboardItem: Identifiable {
         let digest = SHA256.hash(data: data)
         return digest.compactMap { String(format: "%02x", $0) }.joined()
     }
+    
+    // Quick Look 预览支持
+    var quickLookItem: QuickLookItem {
+        switch type {
+        case .image:
+            return QuickLookItem(url: URL(fileURLWithPath: content), title: "图片预览")
+        case .url:
+            return QuickLookItem(text: content, title: "链接")
+        case .text:
+            return QuickLookItem(text: content, title: "文本")
+        }
+    }
+}
+
+// Quick Look 预览项
+struct QuickLookItem: Identifiable {
+    let id = UUID()
+    let url: URL?
+    let text: String?
+    let title: String
+    
+    init(url: URL, title: String) {
+        self.url = url
+        self.text = nil
+        self.title = title
+    }
+    
+    init(text: String, title: String) {
+        self.url = nil
+        self.text = text
+        self.title = title
+    }
+    
+    var previewItemURL: URL? { url }
 }

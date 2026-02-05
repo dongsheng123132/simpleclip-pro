@@ -9,20 +9,20 @@ struct SettingsView: View {
 
     var body: some View {
         VStack(spacing: 20) {
-            Text("设置")
+            Text(NSLocalizedString("设置", comment: ""))
                 .font(.headline)
 
             Form {
-                Section(header: Text("通用")) {
-                    Toggle("点击后自动粘贴", isOn: $autoPaste)
-                        .help("点击历史记录后，自动模拟 Command+V 粘贴")
+                Section(header: Text(NSLocalizedString("通用", comment: ""))) {
+                    Toggle(NSLocalizedString("双击后自动粘贴", comment: ""), isOn: $autoPaste)
+                        .help(NSLocalizedString("双击历史记录后，自动模拟 Command+V 粘贴", comment: ""))
                 }
 
-                Section(header: Text("工作日报")) {
-                    Toggle("每日摘要", isOn: $dailyDigestEnabled)
-                        .help("每天自动根据剪贴内容生成日报摘要")
+                Section(header: Text(NSLocalizedString("工作日报", comment: ""))) {
+                    Toggle(NSLocalizedString("每日摘要", comment: ""), isOn: $dailyDigestEnabled)
+                        .help(NSLocalizedString("每天自动根据剪贴内容生成日报摘要", comment: ""))
                     if dailyDigestEnabled {
-                        Picker("生成时间", selection: $dailyDigestHour) {
+                        Picker(NSLocalizedString("生成时间", comment: ""), selection: $dailyDigestHour) {
                             ForEach(0..<24, id: \.self) { h in
                                 Text(timeLabel(hour: h)).tag(h)
                             }
@@ -32,15 +32,15 @@ struct SettingsView: View {
                 }
 
                 Section {
-                    Button("清空所有历史记录") {
+                    Button(NSLocalizedString("清空所有历史记录", comment: "")) {
                         monitor.clearHistory()
                     }
                     .foregroundColor(.red)
                 }
 
-                Section(header: Text("关于")) {
+                Section(header: Text(NSLocalizedString("关于", comment: ""))) {
                     HStack {
-                        Text("版本")
+                        Text(NSLocalizedString("版本", comment: ""))
                         Spacer()
                         Text("1.1 (AI Features)")
                             .foregroundColor(.secondary)
@@ -50,7 +50,7 @@ struct SettingsView: View {
                     }) {
                         HStack {
                             Image(systemName: "power")
-                            Text("退出程序")
+                            Text(NSLocalizedString("退出程序", comment: ""))
                         }
                         .foregroundColor(.red)
                     }
@@ -58,13 +58,13 @@ struct SettingsView: View {
             }
             .formStyle(.grouped)
 
-            Button("完成") {
+            Button(NSLocalizedString("完成", comment: "")) {
                 dismiss()
             }
             .keyboardShortcut(.defaultAction)
         }
         .padding()
-        .frame(width: 300, height: 320)
+        .frame(width: 300, height: 280)
     }
 
     private func timeLabel(hour: Int) -> String {

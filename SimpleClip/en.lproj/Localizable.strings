@@ -1,0 +1,84 @@
+/* 
+  Localizable.strings
+  SimpleClip - English
+*/
+
+// MARK: - App
+"SimpleClip" = "SimpleClip";
+
+// MARK: - Sidebar Categories
+"按时间" = "Time";
+"今天" = "Today";
+"昨天" = "Yesterday";
+"本周" = "This Week";
+"本月" = "This Month";
+"更早" = "Earlier";
+
+"按类型" = "Type";
+"全部" = "All";
+"图片" = "Images";
+"链接" = "Links";
+"文本" = "Text";
+
+"收藏" = "Favorites";
+"固定" = "Pinned";
+
+// MARK: - Search
+"搜索..." = "Search...";
+"搜索历史记录..." = "Search history...";
+
+// MARK: - Detail View
+"选择一条记录" = "Select an item";
+"复制" = "Copy";
+"已复制" = "Copied";
+"在 Finder 中显示" = "Show in Finder";
+
+// MARK: - Context Menu
+"预览" = "Preview";
+"固定" = "Pin";
+"取消固定" = "Unpin";
+"删除" = "Delete";
+"复制到剪贴板" = "Copy to Clipboard";
+
+// MARK: - Popover
+"管理" = "Manage";
+"图片库" = "Image Library";
+"工作日报" = "Daily Digest";
+"设置…" = "Settings...";
+"退出 SimpleClip" = "Quit SimpleClip";
+"清空" = "Clear";
+"%lld 项" = "%lld items";
+
+// MARK: - Alerts
+"确定要清空历史记录吗？" = "Clear all history?";
+"固定（Pinned）的项目将不会被删除。" = "Pinned items will not be deleted.";
+"取消" = "Cancel";
+"清空" = "Clear";
+
+// MARK: - Settings
+"设置" = "Settings";
+"通用" = "General";
+"双击后自动粘贴" = "Auto-paste on double-click";
+"双击历史记录后，自动模拟 Command+V 粘贴" = "Automatically simulate Command+V after double-clicking history";
+"工作日报" = "Daily Digest";
+"每日摘要" = "Daily Summary";
+"每天自动根据剪贴内容生成日报摘要" = "Automatically generate daily summary from clipboard";
+"生成时间" = "Generation Time";
+"清空所有历史记录" = "Clear All History";
+"关于" = "About";
+"版本" = "Version";
+"退出程序" = "Quit";
+"完成" = "Done";
+
+// MARK: - Daily Digest View
+"重新生成今日" = "Regenerate Today";
+"暂无日报" = "No Digests";
+"每日剪贴摘要将在晚间自动生成" = "Daily digest will be auto-generated in the evening";
+"摘要与建议均为本地处理，无网络、无上传。" = "Summary and suggestions are processed locally, no network, no upload.";
+"在 macOS 26+ 且开启 Apple Intelligence 时可使用更强本地 AI 摘要与决策建议。" = "On macOS 26+ with Apple Intelligence enabled, stronger local AI summary is available.";
+"生成中…" = "Generating...";
+"立即生成今日摘要" = "Generate Today's Digest";
+"选择一天查看摘要" = "Select a day to view summary";
+
+// MARK: - Model
+"🖼️ 图片" = "🖼️ Image";

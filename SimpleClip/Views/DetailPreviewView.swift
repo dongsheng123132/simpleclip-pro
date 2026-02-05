@@ -46,20 +46,29 @@ struct DetailPreviewView: View {
                 .frame(maxWidth: .infinity, alignment: .leading)
 
         case .image:
-            if let image = NSImage(contentsOfFile: item.content) {
-                ZoomableImageView(image: image, maxHeight: 320)
-                    .frame(maxWidth: .infinity)
+            if let image = safeLoadImage(at: item.content) {
+                VStack(spacing: 8) {
+                    Image(nsImage: image)
+                        .resizable()
+                        .aspectRatio(contentMode: .fit)
+                        .frame(maxWidth: .infinity, maxHeight: 300)
+                }
             } else {
                 VStack(spacing: 8) {
                     Image(systemName: "photo.badge.exclamationmark")
                         .font(.largeTitle)
                         .foregroundStyle(.tertiary)
-                    Text("图片无法加载")
+                    Text("图片无法加载或已删除")
                         .font(.caption)
                         .foregroundStyle(.secondary)
                 }
                 .frame(maxWidth: .infinity, minHeight: 160)
             }
         }
+    }
+
+    private func safeLoadImage(at path: String) -> NSImage? {
+        guard FileManager.default.fileExists(atPath: path) else { return nil }
+        return NSImage(contentsOfFile: path)
     }
 }

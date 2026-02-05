@@ -31,7 +31,7 @@ final class DailySummaryService {
         let startOfTomorrow = calendar.date(byAdding: .day, value: 1, to: startOfToday) ?? startOfToday
         let itemDescriptor = FetchDescriptor<ClipboardItem>(
             predicate: #Predicate<ClipboardItem> { item in
-                item.timestamp >= startOfToday && item.timestamp < startOfTomorrow && (item.type == .text || item.type == .url)
+                item.timestamp >= startOfToday && item.timestamp < startOfTomorrow && (item.type.rawValue == "text" || item.type.rawValue == "url")
             },
             sortBy: []
         )
@@ -121,22 +121,37 @@ final class DailySummaryService {
             predicate: #Predicate<DailyDigest> { $0.date == startOfToday },
             sortBy: []
         )
-        if let existing = try? modelContext.fetch(descriptor).first {
-            modelContext.delete(existing)
-            try? modelContext.save()
+        do {
+            if let existing = try modelContext.fetch(descriptor).first {
+                modelContext.delete(existing)
+                try modelContext.save()
+            }
+            tryEnsureTodayDigest()
+        } catch {
+            NSLog("❌ 重新生成日报失败: \(error.localizedDescription)")
         }
-        tryEnsureTodayDigest()
     }
 
     private static func sendDigestGeneratedNotification(itemCount: Int) {
-        UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .sound]) { granted, _ in
-            guard granted else { return }
+        UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .sound]) { granted, error in
+            if let error = error {
+                NSLog("❌ 通知权限请求失败: \(error.localizedDescription)")
+                return
+            }
+            guard granted else {
+                NSLog("⚠️ 用户拒绝了通知权限")
+                return
+            }
             let content = UNMutableNotificationContent()
             content.title = "今日剪贴摘要已生成"
             content.body = "共 \(itemCount) 条记录，可在 SimpleClip 工作日报中查看。"
             content.sound = .default
             let request = UNNotificationRequest(identifier: "dailyDigest-\(UUID().uuidString)", content: content, trigger: nil)
-            UNUserNotificationCenter.current().add(request)
+            UNUserNotificationCenter.current().add(request) { error in
+                if let error = error {
+                    NSLog("❌ 发送通知失败: \(error.localizedDescription)")
+                }
+            }
         }
     }
     

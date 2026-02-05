@@ -19,7 +19,6 @@ struct SimpleClipApp: App {
 class AppDelegate: NSObject, NSApplicationDelegate {
     var statusItem: NSStatusItem?
     var popover = NSPopover()
-    var detachedWindow: NSWindow?
     var managerWindow: NSWindow? // 记忆库管理窗口
     var monitor: ClipboardMonitor?
     var summaryService: DailySummaryService?
@@ -28,52 +27,47 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     var dailyDigestTimer: Timer?
 
     func applicationDidFinishLaunching(_ notification: Notification) {
-        // 初始化 SwiftData
+        // 初始化 SwiftData - 优雅降级处理
         do {
             container = try ModelContainer(for: ClipboardItem.self, DailyDigest.self)
         } catch {
-            fatalError("Failed to create ModelContainer: \(error)")
+            NSLog("❌ 数据库初始化失败: \(error)")
+            showDatabaseErrorAlert(error: error)
+            return
         }
 
         // 创建菜单栏图标
         statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
 
-        if let button = statusItem?.button {
-            button.image = NSImage(systemSymbolName: "doc.on.clipboard", accessibilityDescription: "Clipboard")
-            button.action = #selector(togglePopover)
-            button.sendAction(on: [.leftMouseUp, .rightMouseUp]) // 支持右键点击
+        guard let button = statusItem?.button else {
+            showStatusBarError()
+            return
         }
+
+        // 设置按钮
+        button.target = self
+        
+        // 设置图标
+        setupStatusBarIcon(button: button)
+
+        // 设置点击行为
+        button.action = #selector(togglePopover)
+        button.sendAction(on: [.leftMouseUp, .rightMouseUp])
 
         // 设置 Popover
         popover.contentSize = NSSize(width: 400, height: 600)
         popover.behavior = .transient
 
         // 创建监听器与日报服务
-        if let context = container?.mainContext {
-            monitor = ClipboardMonitor(modelContext: context)
-            monitor?.startMonitoring()
-            summaryService = DailySummaryService(modelContext: context)
-            if UserDefaults.standard.bool(forKey: "dailyDigestEnabled") != false {
-                summaryService?.tryEnsureTodayDigest()
-            }
-        }
+        setupServices()
 
-        // 设置内容视图（传入闭包，确保菜单点击能打开管理窗口）
-        if let monitor = monitor, let container = container {
-            let rootView = PopoverView(
-                monitor: monitor,
-                onOpenManager: { [weak self] category in
-                    self?.openManagerWindow(initialCategory: category)
-                },
-                onToggleDetach: { [weak self] in
-                    self?.toggleDetachMode()
-                }
-            )
-            .modelContainer(container)
-            popover.contentViewController = NSHostingController(rootView: rootView)
-        }
+        // 设置内容视图
+        setupPopoverContent()
 
+        // 设置定时器
         scheduleDailyDigestTimer()
+        
+        // 监听设置变化
         NotificationCenter.default.addObserver(
             forName: UserDefaults.didChangeNotification,
             object: nil,
@@ -84,16 +78,79 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             self?.scheduleDailyDigestTimer()
         }
 
-        // 全局快捷键 Command+Shift+V
+        // 全局快捷键
         setupHotKey()
 
-        // 检查辅助功能权限（用于自动粘贴）
+        // 检查辅助功能权限
         checkAccessibilityPermissions()
+        
+        NSLog("✓ SimpleClip 已启动")
     }
     
-    /// 打开剪贴板管理窗口，可选直接进入某分类（如 "images" 截图库）
+    // MARK: - Setup Helpers
+    
+    private func setupStatusBarIcon(button: NSStatusBarButton) {
+        var iconSet = false
+        
+        // 尝试 SF Symbol
+        let symbolNames = ["doc.on.clipboard", "clipboard", "doc", "note.text", "square.on.square"]
+        for symbolName in symbolNames {
+            if let image = NSImage(systemSymbolName: symbolName, accessibilityDescription: "SimpleClip") {
+                let iconSize = NSSize(width: 18, height: 18)
+                image.size = iconSize
+                image.isTemplate = true
+                button.image = image
+                button.imagePosition = .imageOnly
+                iconSet = true
+                break
+            }
+        }
+        
+        // 后备：文本
+        if !iconSet {
+            button.title = "SC"
+            button.imagePosition = .noImage
+            button.font = NSFont.systemFont(ofSize: 14, weight: .medium)
+        }
+    }
+    
+    private func showStatusBarError() {
+        let alert = NSAlert()
+        alert.messageText = "错误"
+        alert.informativeText = "无法创建菜单栏图标"
+        alert.alertStyle = .critical
+        alert.runModal()
+        NSLog("❌ 无法创建状态栏按钮")
+    }
+    
+    private func setupServices() {
+        guard let context = container?.mainContext else { return }
+        monitor = ClipboardMonitor(modelContext: context)
+        monitor?.startMonitoring()
+        summaryService = DailySummaryService(modelContext: context)
+        if UserDefaults.standard.bool(forKey: "dailyDigestEnabled") != false {
+            summaryService?.tryEnsureTodayDigest()
+        }
+    }
+    
+    private func setupPopoverContent() {
+        guard let monitor = monitor, let container = container else { return }
+        
+        let rootView = PopoverView(
+            monitor: monitor,
+            onOpenManager: { [weak self] category in
+                self?.openManagerWindow(initialCategory: category)
+            }
+        )
+        .modelContainer(container)
+        
+        popover.contentViewController = NSHostingController(rootView: rootView)
+    }
+
+    // MARK: - Window Management
+    
     func openManagerWindow(initialCategory: String? = nil) {
-        if let window = managerWindow {
+        if managerWindow != nil {
             if let category = initialCategory {
                 NotificationCenter.default.post(name: .switchManagerCategory, object: category)
             }
@@ -118,13 +175,16 @@ class AppDelegate: NSObject, NSApplicationDelegate {
 
         window.contentViewController = NSHostingController(rootView: rootView)
         managerWindow = window
-        NotificationCenter.default.addObserver(forName: NSWindow.willCloseNotification, object: window, queue: nil) { [weak self] _ in
+        NotificationCenter.default.addObserver(
+            forName: NSWindow.willCloseNotification,
+            object: window,
+            queue: nil
+        ) { [weak self] _ in
             self?.managerWindow = nil
         }
 
         NSApp.activate(ignoringOtherApps: true)
         window.makeKeyAndOrderFront(nil)
-        // 菜单关闭后再置前一次，避免被 popover/菜单抢焦点
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.25) { [weak self] in
             self?.bringManagerWindowToFront()
         }
@@ -134,46 +194,36 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         NSApp.activate(ignoringOtherApps: true)
         managerWindow?.makeKeyAndOrderFront(nil)
     }
-    
-    func checkAccessibilityPermissions() {
-        let options: [String: Any] = [kAXTrustedCheckOptionPrompt.takeUnretainedValue() as String: true]
-        let accessEnabled = AXIsProcessTrustedWithOptions(options as CFDictionary)
-        
-        if !accessEnabled {
-            print("需要辅助功能权限以启用自动粘贴功能")
-        }
-    }
-    
+
+    // MARK: - Actions
+
     @objc func togglePopover(_ sender: Any?) {
-        // 检查是否是右键点击
+        // 右键显示菜单
         if let event = NSApp.currentEvent, event.type == .rightMouseUp {
-            // 右键显示菜单
-            let menu = NSMenu()
-            
-            menu.addItem(NSMenuItem(title: "打开管理界面", action: #selector(openManager), keyEquivalent: "m"))
-            menu.addItem(NSMenuItem.separator())
-            menu.addItem(NSMenuItem(title: "退出 SimpleClip", action: #selector(quitApp), keyEquivalent: "q"))
-            
-            statusItem?.menu = menu
-            statusItem?.button?.performClick(nil)
-            statusItem?.menu = nil // 点击后清除，恢复左键点击行为
+            showContextMenu()
             return
         }
         
+        // 左键切换 Popover
         if let button = statusItem?.button {
             if popover.isShown {
                 popover.performClose(nil)
             } else {
-                // 如果独立窗口存在且可见，则聚焦独立窗口
-                if let window = detachedWindow, window.isVisible {
-                    window.makeKeyAndOrderFront(nil)
-                    NSApp.activate(ignoringOtherApps: true)
-                } else {
-                    popover.show(relativeTo: button.bounds, of: button, preferredEdge: .minY)
-                    NSApp.activate(ignoringOtherApps: true)
-                }
+                popover.show(relativeTo: button.bounds, of: button, preferredEdge: .minY)
+                NSApp.activate(ignoringOtherApps: true)
             }
         }
+    }
+    
+    private func showContextMenu() {
+        let menu = NSMenu()
+        menu.addItem(NSMenuItem(title: "打开管理界面", action: #selector(openManager), keyEquivalent: "m"))
+        menu.addItem(NSMenuItem.separator())
+        menu.addItem(NSMenuItem(title: "退出 SimpleClip", action: #selector(quitApp), keyEquivalent: "q"))
+        
+        statusItem?.menu = menu
+        statusItem?.button?.performClick(nil)
+        statusItem?.menu = nil
     }
     
     @objc func openManager() {
@@ -183,68 +233,60 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     @objc func quitApp() {
         NSApplication.shared.terminate(nil)
     }
-    
-    func toggleDetachMode() {
-        if let window = detachedWindow, window.isVisible {
-            // 关闭独立窗口
-            window.close()
-            detachedWindow = nil
-        } else {
-            // 关闭 Popover
-            popover.performClose(nil)
-            
-            // 创建独立窗口
-            let window = NSWindow(
-                contentRect: NSRect(x: 0, y: 0, width: 400, height: 600),
-                styleMask: [.borderless, .resizable], // 无边框模式，更像悬浮窗
-                backing: .buffered,
-                defer: false
-            )
-            window.isOpaque = false
-            window.backgroundColor = .clear // 透明背景，由 View 负责背景
-            window.hasShadow = true
-            window.level = .floating // 置顶
-            window.isMovableByWindowBackground = true // 允许拖拽背景移动
-            window.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary] // 允许在所有桌面显示
-            window.hidesOnDeactivate = false // 失去焦点时不隐藏
-            window.center()
-            
-            // 设置内容（同样传入闭包）
-            if let monitor = monitor, let container = container {
-                let rootView = PopoverView(
-                    monitor: monitor,
-                    onOpenManager: { [weak self] category in
-                        self?.openManagerWindow(initialCategory: category)
-                    },
-                    onToggleDetach: { [weak self] in
-                        self?.toggleDetachMode()
-                    }
-                )
-                .modelContainer(container)
-                window.contentViewController = NSHostingController(rootView: rootView)
+
+    // MARK: - Error Handling
+
+    private func showDatabaseErrorAlert(error: Error) {
+        let alert = NSAlert()
+        alert.messageText = "SimpleClip 启动失败"
+        alert.informativeText = "无法初始化数据存储：\(error.localizedDescription)\n\n可能的原因：\n• 磁盘空间不足\n• 数据文件损坏\n• 权限问题"
+        alert.alertStyle = .critical
+        alert.addButton(withTitle: "退出")
+        alert.addButton(withTitle: "查看帮助")
+        
+        let response = alert.runModal()
+        if response == .alertSecondButtonReturn {
+            if let url = URL(string: "https://github.com") {
+                NSWorkspace.shared.open(url)
             }
-            
-            window.makeKeyAndOrderFront(nil)
-            detachedWindow = window
-            NSApp.activate(ignoringOtherApps: true)
+        }
+        NSApplication.shared.terminate(nil)
+    }
+
+    // MARK: - Permissions & HotKey
+
+    func checkAccessibilityPermissions() {
+        let options: [String: Any] = [kAXTrustedCheckOptionPrompt.takeUnretainedValue() as String: true]
+        let accessEnabled = AXIsProcessTrustedWithOptions(options as CFDictionary)
+        
+        if !accessEnabled {
+            print("需要辅助功能权限以启用自动粘贴功能")
         }
     }
-    
+
     func setupHotKey() {
         eventMonitor = NSEvent.addGlobalMonitorForEvents(matching: .keyDown) { [weak self] event in
             // Command + Shift + V
-            // keyCode 9 corresponds to 'V' (ANSI_V)
             if event.modifierFlags.contains([.command, .shift]) && event.keyCode == 9 {
                 self?.togglePopover(nil)
             }
         }
     }
-    
+
+    // MARK: - Lifecycle
+
     func applicationWillTerminate(_ notification: Notification) {
         monitor?.stopMonitoring()
         dailyDigestTimer?.invalidate()
         dailyDigestTimer = nil
     }
+
+    func applicationShouldHandleReopen(_ sender: NSApplication, hasVisibleWindows flag: Bool) -> Bool {
+        togglePopover(nil)
+        return true
+    }
+
+    // MARK: - Daily Digest Timer
 
     private func scheduleDailyDigestTimer() {
         guard UserDefaults.standard.bool(forKey: "dailyDigestEnabled") != false else { return }
@@ -282,14 +324,5 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             self?.rescheduleDailyDigestTimer()
         }
         RunLoop.main.add(dailyDigestTimer!, forMode: .common)
-    }
-    
-    func applicationShouldHandleReopen(_ sender: NSApplication, hasVisibleWindows flag: Bool) -> Bool {
-        if let window = detachedWindow, window.isVisible {
-            window.makeKeyAndOrderFront(nil)
-        } else {
-            togglePopover(nil)
-        }
-        return true
     }
 }

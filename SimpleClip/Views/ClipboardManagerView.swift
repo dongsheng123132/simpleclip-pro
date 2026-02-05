@@ -1,11 +1,12 @@
 import SwiftUI
 import SwiftData
 
+// MARK: - 主视图：三栏管理界面（极简版）
 struct ClipboardManagerView: View {
     @Query(sort: \ClipboardItem.timestamp, order: .reverse) private var items: [ClipboardItem]
     @State private var selectedCategory: String? = "all"
     @State private var searchText = ""
-    @State private var selectedItemIds: Set<UUID> = []
+    @State private var selectedItemId: UUID? = nil
     @Environment(\.modelContext) private var modelContext
 
     var initialCategory: String?
@@ -48,12 +49,13 @@ struct ClipboardManagerView: View {
         return byCategory.filter { $0.content.localizedStandardContains(searchText) }
     }
 
-    var selectedItems: [ClipboardItem] {
-        items.filter { selectedItemIds.contains($0.id) }
+    var selectedItem: ClipboardItem? {
+        items.first { $0.id == selectedItemId }
     }
 
     var body: some View {
         NavigationSplitView {
+            // 左栏：筛选器
             List(selection: $selectedCategory) {
                 Section("按时间") {
                     Label("今天", systemImage: "sun.max").tag("today")
@@ -64,7 +66,7 @@ struct ClipboardManagerView: View {
                 }
                 Section("按类型") {
                     Label("全部", systemImage: "tray.full").tag("all")
-                    Label("图片", systemImage: "photo.on.rectangle").tag("images")
+                    Label("图片", systemImage: "photo").tag("images")
                     Label("链接", systemImage: "link").tag("links")
                     Label("文本", systemImage: "text.quote").tag("text")
                 }
@@ -73,728 +75,311 @@ struct ClipboardManagerView: View {
                 }
             }
             .listStyle(.sidebar)
-            .navigationTitle("剪贴板")
-            .frame(minWidth: 200)
+            .navigationTitle(NSLocalizedString("SimpleClip", comment: ""))
+            .frame(minWidth: 180)
 
         } content: {
+            // 中栏：列表
             Group {
                 if selectedCategory == "images" {
-                    ImageGalleryView(items: filteredItems, selectedId: Binding(
-                        get: { selectedItemIds.first },
-                        set: { if let id = $0 { selectedItemIds = [id] } else { selectedItemIds = [] } }
-                    ))
+                    SimpleImageListView(
+                        items: filteredItems,
+                        selectedId: $selectedItemId
+                    )
                 } else {
-                    List(filteredItems, selection: $selectedItemIds) { item in
-                        ManagerListItemView(item: item)
+                    List(filteredItems, id: \.id, selection: $selectedItemId) { item in
+                        SimpleListRow(item: item, isSelected: selectedItemId == item.id)
                             .tag(item.id)
                     }
-                    .listStyle(.inset)
-                    .searchable(text: $searchText, placement: .toolbar, prompt: "搜索...")
+                    .listStyle(.plain)
                 }
             }
-            .frame(minWidth: 320)
+            .frame(minWidth: 280)
+            .searchable(text: $searchText, placement: .toolbar, prompt: NSLocalizedString("搜索...", comment: ""))
 
         } detail: {
-            ManagerDetailView(
-                selectedItems: selectedItems,
-                allItems: items,
-                onDelete: deleteSelected
-            )
-            .frame(minWidth: 420)
+            // 右栏：详情预览
+            if let item = selectedItem {
+                SimpleDetailView(item: item, onDelete: { deleteItem(item) })
+            } else {
+                EmptyDetailView()
+            }
         }
         .onAppear {
             if let category = initialCategory {
                 selectedCategory = category
             }
+            selectFirstItem()
         }
-        .onReceive(NotificationCenter.default.publisher(for: .switchManagerCategory)) { notification in
-            if let category = notification.object as? String {
-                selectedCategory = category
-            }
+        .onChange(of: selectedCategory) { _, _ in
+            selectFirstItem()
+        }
+        .onChange(of: searchText) { _, _ in
+            selectFirstItem()
         }
     }
 
-    private func deleteSelected() {
-        for item in selectedItems {
-            modelContext.delete(item)
+    private func selectFirstItem() {
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) {
+            selectedItemId = filteredItems.first?.id
         }
+    }
+
+    private func deleteItem(_ item: ClipboardItem) {
+        modelContext.delete(item)
         try? modelContext.save()
-        selectedItemIds.removeAll()
+        if selectedItemId == item.id {
+            selectedItemId = nil
+            selectFirstItem()
+        }
     }
 }
 
-// 列表项视图
-struct ManagerListItemView: View {
+// MARK: - 简化列表行
+struct SimpleListRow: View {
     let item: ClipboardItem
-    @Environment(\.modelContext) private var modelContext
+    let isSelected: Bool
 
     var body: some View {
-        HStack(alignment: .top) {
-            // 左侧图标或缩略图
-            Group {
-                if item.type == .image, let image = ManagerListItemView.downsampledImage(at: item.content, maxPixel: 200) {
-                    Image(nsImage: image)
-                        .resizable()
-                        .aspectRatio(contentMode: .fill)
-                        .frame(width: 50, height: 50)
-                        .clipped()
-                        .cornerRadius(6)
-                        .overlay(
-                            RoundedRectangle(cornerRadius: 6)
-                                .stroke(Color.gray.opacity(0.2), lineWidth: 1)
-                        )
-                } else {
-                    ZStack {
-                        RoundedRectangle(cornerRadius: 6)
-                            .fill(Color(NSColor.controlBackgroundColor))
-                            .frame(width: 50, height: 50)
-                            .overlay(
-                                RoundedRectangle(cornerRadius: 6)
-                                    .stroke(Color.gray.opacity(0.2), lineWidth: 1)
-                            )
-                        
-                        switch item.type {
-                        case .text: Image(systemName: "text.quote").font(.title2)
-                        case .image: Image(systemName: "photo").font(.title2)
-                        case .url: Image(systemName: "link").font(.title2)
-                        }
-                    }
-                    .foregroundColor(.secondary)
-                }
-            }
+        HStack(spacing: 12) {
+            // 类型图标
+            Image(systemName: iconName)
+                .font(.system(size: 14))
+                .foregroundColor(iconColor)
+                .frame(width: 24, height: 24)
 
-            // 中间文字内容
-            VStack(alignment: .leading, spacing: 6) {
-                Text(item.preview)
-                    .lineLimit(3) // 增加到3行
-                    .multilineTextAlignment(.leading)
-                    .font(.system(size: 14))
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                
-                HStack {
-                    Text(item.timeAgo)
-                        .font(.caption)
-                        .foregroundColor(.secondary)
-                    
-                    if item.type == .url {
-                        Text("• 链接")
-                            .font(.caption)
-                            .foregroundColor(.secondary)
-                    }
-                }
-            }
-            .padding(.leading, 4)
-            
-            Spacer()
-            
-            // 右侧固定图标
-            if item.isPinned {
-                Image(systemName: "pin.fill")
-                    .font(.caption)
-                    .foregroundColor(.orange)
-            }
+            // 内容预览
+            Text(item.preview)
+                .lineLimit(2)
+                .font(.system(size: 13))
+                .frame(maxWidth: .infinity, alignment: .leading)
+
+            // 时间
+            Text(item.timeAgo)
+                .font(.caption)
+                .foregroundColor(.secondary)
         }
-        .padding(.vertical, 6)
-        .contextMenu {
-            Button("复制到剪贴板") {
-                copyItemToPasteboard(item)
-            }
-            Button(item.isPinned ? "取消固定" : "固定") {
-                item.isPinned.toggle()
-                try? modelContext.save()
-            }
-            Divider()
-            Button(role: .destructive) {
-                modelContext.delete(item)
-                try? modelContext.save()
-            } label: {
-                Label("删除", systemImage: "trash")
-            }
-        }
+        .padding(.horizontal, 12)
+        .padding(.vertical, 10)
+        .background(isSelected ? Color.accentColor.opacity(0.12) : Color.clear)
+        .contentShape(Rectangle())
     }
 
-    private func copyItemToPasteboard(_ item: ClipboardItem) {
-        let p = NSPasteboard.general
-        p.clearContents()
+    private var iconName: String {
         switch item.type {
-        case .text, .url:
-            p.setString(item.content, forType: .string)
-        case .image:
-            if let image = NSImage(contentsOfFile: item.content) {
-                p.writeObjects([image])
-            }
+        case .text: return "text.quote"
+        case .image: return "photo"
+        case .url: return "link"
+        }
+    }
+
+    private var iconColor: Color {
+        switch item.type {
+        case .text: return .primary
+        case .image: return .purple
+        case .url: return .blue
         }
     }
 }
 
-extension ManagerListItemView {
-    static private var cache = NSCache<NSString, NSImage>()
-    static func downsampledImage(at path: String, maxPixel: CGFloat) -> NSImage? {
-        if let cached = cache.object(forKey: path as NSString) { return cached }
-        guard let data = try? Data(contentsOf: URL(fileURLWithPath: path)) else { return nil }
-        guard let source = CGImageSourceCreateWithData(data as CFData, nil) else { return nil }
-        let options: [CFString: Any] = [
-            kCGImageSourceCreateThumbnailFromImageAlways: true,
-            kCGImageSourceThumbnailMaxPixelSize: Int(maxPixel),
-            kCGImageSourceShouldCache: false
-        ]
-        guard let cgThumb = CGImageSourceCreateThumbnailAtIndex(source, 0, options as CFDictionary) else { return nil }
-        let thumb = NSImage(cgImage: cgThumb, size: NSSize(width: cgThumb.width, height: cgThumb.height))
-        cache.setObject(thumb, forKey: path as NSString)
-        return thumb
-    }
-}
-
-// 图片画廊视图：按日期分组（今天、昨天、本周、更早），类似相册
-struct ImageGalleryView: View {
+// MARK: - 简化图片列表
+struct SimpleImageListView: View {
     let items: [ClipboardItem]
     @Binding var selectedId: UUID?
 
     private let columns = [
-        GridItem(.adaptive(minimum: 140, maximum: 180), spacing: 12)
+        GridItem(.adaptive(minimum: 100, maximum: 140), spacing: 12)
     ]
-
-    private enum DateSection: String, CaseIterable {
-        case today = "今天"
-        case yesterday = "昨天"
-        case thisWeek = "本周"
-        case earlier = "更早"
-    }
-
-    private func section(for date: Date) -> DateSection {
-        let cal = Calendar.current
-        if cal.isDateInToday(date) { return .today }
-        if cal.isDateInYesterday(date) { return .yesterday }
-        if cal.isDate(date, equalTo: Date(), toGranularity: .weekOfYear) { return .thisWeek }
-        return .earlier
-    }
-
-    private var grouped: [(DateSection, [ClipboardItem])] {
-        let order: [DateSection] = [.today, .yesterday, .thisWeek, .earlier]
-        let groupedDict = Dictionary(grouping: items) { section(for: $0.timestamp) }
-        return order.compactMap { key in
-            guard let list = groupedDict[key], !list.isEmpty else { return nil }
-            return (key, list)
-        }
-    }
 
     var body: some View {
         ScrollView {
-            LazyVStack(alignment: .leading, spacing: 20) {
-                ForEach(grouped, id: \.0.rawValue) { sectionKey, sectionItems in
-                    Section {
-                        LazyVGrid(columns: columns, spacing: 12) {
-                            ForEach(sectionItems) { item in
-                                galleryCell(item: item)
-                            }
-                        }
-                    } header: {
-                        Text(sectionKey.rawValue)
-                            .font(.subheadline)
-                            .fontWeight(.semibold)
-                            .foregroundStyle(.secondary)
-                            .frame(maxWidth: .infinity, alignment: .leading)
-                            .padding(.horizontal, 4)
-                    }
+            LazyVGrid(columns: columns, spacing: 12) {
+                ForEach(items) { item in
+                    SimpleImageCell(item: item, isSelected: selectedId == item.id)
+                        .onTapGesture { selectedId = item.id }
                 }
             }
             .padding()
         }
     }
+}
 
-    private func galleryCell(item: ClipboardItem) -> some View {
-        VStack(spacing: 6) {
-            if let image = NSImage(contentsOfFile: item.content) {
+struct SimpleImageCell: View {
+    let item: ClipboardItem
+    let isSelected: Bool
+
+    var body: some View {
+        ZStack {
+            Color.gray.opacity(0.1)
+
+            if let image = loadImage(at: item.content) {
                 Image(nsImage: image)
                     .resizable()
-                    .aspectRatio(contentMode: .fill)
-                    .frame(height: 110)
-                    .clipped()
-                    .cornerRadius(8)
-                    .shadow(radius: 1)
+                    .aspectRatio(contentMode: .fit)
+                    .padding(4)
             } else {
-                Rectangle()
-                    .fill(Color.gray.opacity(0.2))
-                    .frame(height: 110)
-                    .overlay(Image(systemName: "photo.fill").foregroundColor(.gray))
-                    .cornerRadius(8)
-            }
-            Text(item.timestamp, style: .time)
-                .font(.caption2)
-                .foregroundColor(.secondary)
-        }
-        .padding(8)
-        .background(selectedId == item.id ? Color.accentColor.opacity(0.15) : Color(NSColor.controlBackgroundColor))
-        .cornerRadius(10)
-        .onTapGesture { selectedId = item.id }
-        .contextMenu {
-            Button("查看详情") { selectedId = item.id }
-            Button("复制到剪贴板") {
-                let pasteboard = NSPasteboard.general
-                pasteboard.clearContents()
-                if let image = NSImage(contentsOfFile: item.content) {
-                    pasteboard.writeObjects([image])
-                }
+                Image(systemName: "photo")
+                    .font(.system(size: 24))
+                    .foregroundColor(.gray)
             }
         }
+        .frame(height: 100)
+        .cornerRadius(8)
+        .overlay(
+            RoundedRectangle(cornerRadius: 8)
+                .stroke(isSelected ? Color.accentColor : Color.clear, lineWidth: 3)
+        )
+    }
+
+    private func loadImage(at path: String) -> NSImage? {
+        guard FileManager.default.fileExists(atPath: path) else { return nil }
+        return NSImage(contentsOfFile: path)
     }
 }
 
-// 右侧详情：放大预览 + 复制/删除，无 AI
-struct ManagerDetailView: View {
-    let selectedItems: [ClipboardItem]
-    let allItems: [ClipboardItem]
-    var onDelete: (() -> Void)?
-
-    var body: some View {
-        Group {
-            if selectedItems.isEmpty {
-                VStack(spacing: 16) {
-                    Image(systemName: "doc.text.magnifyingglass")
-                        .font(.system(size: 48))
-                        .foregroundStyle(.tertiary)
-                    Text("选择一条记录")
-                        .font(.title3)
-                        .foregroundStyle(.secondary)
-                    Text("可放大预览、点击复制到剪贴板")
-                        .font(.caption)
-                        .foregroundStyle(.tertiary)
-                        .multilineTextAlignment(.center)
-                }
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
-            } else {
-                ScrollView {
-                    VStack(alignment: .leading, spacing: 16) {
-                        HStack {
-                            Text("已选 \(selectedItems.count) 条")
-                                .font(.subheadline)
-                                .foregroundColor(.secondary)
-                            Spacer()
-                            if let onDelete = onDelete {
-                                Button(role: .destructive) {
-                                    onDelete()
-                                } label: {
-                                    Label("删除选中", systemImage: "trash")
-                                }
-                            }
-                        }
-                        Divider()
-                        ForEach(selectedItems.sorted(by: { $0.timestamp > $1.timestamp })) { item in
-                            ItemDetailCard(item: item)
-                        }
-                    }
-                    .padding()
-                }
-            }
-        }
-    }
-}
-
-// 单条内容卡片：放大预览 + 点击复制；图片可放大、文本/链接完整展示
-struct ItemDetailCard: View {
+// MARK: - 详情视图（右侧）
+struct SimpleDetailView: View {
     let item: ClipboardItem
+    let onDelete: () -> Void
     @State private var copied = false
-    @State private var showImageZoom = false
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
+        VStack(spacing: 0) {
+            // 顶部工具栏
             HStack {
                 Text(item.timestamp, style: .date)
-                    .font(.caption)
+                    .font(.subheadline)
                     .foregroundColor(.secondary)
                 Text(item.timestamp, style: .time)
-                    .font(.caption2)
-                    .foregroundStyle(.tertiary)
-                if item.isPinned {
-                    Image(systemName: "pin.fill")
-                        .font(.caption2)
-                        .foregroundColor(.orange)
-                }
+                    .font(.caption)
+                    .foregroundColor(.secondary)
                 Spacer()
+                Button(role: .destructive, action: onDelete) {
+                    Image(systemName: "trash")
+                }
+                .buttonStyle(.borderless)
+            }
+            .padding()
+
+            Divider()
+
+            // 内容区域
+            ScrollView {
+                VStack(alignment: .leading, spacing: 16) {
+                    contentView
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                }
+                .padding()
+            }
+
+            Divider()
+
+            // 底部操作栏
+            HStack(spacing: 16) {
+                // 图片显示"在 Finder 中打开"
+                if item.type == .image {
+                    Button {
+                        showInFinder(path: item.content)
+                    } label: {
+                        Label(NSLocalizedString("在 Finder 中显示", comment: ""), systemImage: "folder")
+                            .font(.system(size: 13))
+                    }
+                    .buttonStyle(.bordered)
+                    .controlSize(.regular)
+                }
+                
+                Spacer()
+                
+                // 复制按钮
                 Button {
-                    copyItemToPasteboard(item)
+                    copyToPasteboard()
                     copied = true
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 1.2) { copied = false }
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) { copied = false }
                 } label: {
-                    Label(copied ? "已复制" : "复制", systemImage: copied ? "checkmark.circle.fill" : "doc.on.clipboard")
+                    Label(copied ? NSLocalizedString("已复制", comment: "") : NSLocalizedString("复制", comment: ""), systemImage: copied ? "checkmark" : "doc.on.doc")
+                        .font(.system(size: 14, weight: .medium))
                 }
                 .buttonStyle(.borderedProminent)
-                .controlSize(.small)
+                .controlSize(.regular)
             }
-            Divider()
-            // 内容区：保证最小高度，避免“看不到”
-            contentArea
-                .frame(minHeight: 100)
-                .frame(maxWidth: .infinity, alignment: .leading)
+            .padding()
+            .background(Color(NSColor.controlBackgroundColor))
         }
-        .padding(14)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .background(Color(NSColor.controlBackgroundColor))
-        .cornerRadius(10)
-        .sheet(isPresented: $showImageZoom) {
-            if item.type == .image, let image = NSImage(contentsOfFile: item.content) {
-                ImageZoomSheet(image: image, onDismiss: { showImageZoom = false })
-            }
+    }
+    
+    private func showInFinder(path: String) {
+        let fileManager = FileManager.default
+        guard fileManager.fileExists(atPath: path) else {
+            NSLog("⚠️ 文件不存在: \(path)")
+            return
         }
+        let url = URL(fileURLWithPath: path)
+        NSWorkspace.shared.activateFileViewerSelecting([url])
     }
 
     @ViewBuilder
-    private var contentArea: some View {
+    private var contentView: some View {
         switch item.type {
         case .image:
-            if let image = NSImage(contentsOfFile: item.content) {
-                VStack(alignment: .leading, spacing: 8) {
-                    ZoomableImageView(image: image, maxHeight: 420)
-                        .cornerRadius(8)
-                    Button {
-                        showImageZoom = true
-                    } label: {
-                        Label("放大查看", systemImage: "arrow.up.left.and.arrow.down.right")
-                    }
-                    .buttonStyle(.bordered)
-                    .controlSize(.small)
-                }
+            if let image = loadImage(at: item.content) {
+                Image(nsImage: image)
+                    .resizable()
+                    .aspectRatio(contentMode: .fit)
+                    .cornerRadius(8)
             } else {
-                Text("[图片无法加载]")
-                    .font(.body)
+                Text(NSLocalizedString("[图片无法加载]", comment: ""))
                     .foregroundColor(.secondary)
             }
+
         case .url:
-            VStack(alignment: .leading) {
-                Link(destination: URL(string: item.content) ?? URL(string: "https://")!) {
-                    Text(item.content)
-                        .font(.body)
-                        .multilineTextAlignment(.leading)
-                        .foregroundColor(.blue)
-                }
-                .textSelection(.enabled)
-                .frame(maxWidth: .infinity, alignment: .leading)
+            if let url = URL(string: item.content) {
+                Link(item.content, destination: url)
+                    .font(.body)
+                    .foregroundColor(.blue)
+                    .textSelection(.enabled)
+            } else {
+                Text(item.content)
+                    .font(.body)
+                    .textSelection(.enabled)
             }
+
         case .text:
             Text(item.content)
                 .font(.body)
                 .textSelection(.enabled)
-                .frame(maxWidth: .infinity, alignment: .leading)
         }
     }
 
-    private func copyItemToPasteboard(_ item: ClipboardItem) {
+    private func loadImage(at path: String) -> NSImage? {
+        guard FileManager.default.fileExists(atPath: path) else { return nil }
+        return NSImage(contentsOfFile: path)
+    }
+
+    private func copyToPasteboard() {
         let p = NSPasteboard.general
         p.clearContents()
         switch item.type {
         case .text, .url:
             p.setString(item.content, forType: .string)
         case .image:
-            if let image = NSImage(contentsOfFile: item.content) {
+            if let image = loadImage(at: item.content) {
                 p.writeObjects([image])
             }
         }
     }
 }
 
-// 支持双指捏合缩放 + 拖拽平移的图片视图（原生触控板/触屏手势）
-struct ZoomableImageView: View {
-    let image: NSImage
-    var maxHeight: CGFloat = 420
-    @State private var scale: CGFloat = 1
-    @State private var lastScale: CGFloat = 1
-    @State private var offset: CGSize = .zero
-    @State private var lastOffset: CGSize = .zero
-
+// MARK: - 空状态视图
+struct EmptyDetailView: View {
     var body: some View {
-        Image(nsImage: image)
-            .resizable()
-            .aspectRatio(contentMode: .fit)
-            .frame(maxHeight: maxHeight)
-            .scaleEffect(scale)
-            .offset(offset)
-            .gesture(
-                MagnificationGesture()
-                    .onChanged { scale = lastScale * $0 }
-                    .onEnded { value in
-                        lastScale = scale
-                        if scale <= 1 {
-                            scale = 1
-                            lastScale = 1
-                            offset = .zero
-                            lastOffset = .zero
-                        }
-                    }
-            )
-            .simultaneousGesture(
-                DragGesture()
-                    .onChanged { value in
-                        if scale > 1 {
-                            offset = CGSize(width: lastOffset.width + value.translation.width, height: lastOffset.height + value.translation.height)
-                        }
-                    }
-                    .onEnded { _ in lastOffset = offset }
-            )
-            .onTapGesture(count: 2) {
-                scale = 1
-                lastScale = 1
-                offset = .zero
-                lastOffset = .zero
-            }
-    }
-}
-
-// 图片放大弹窗：大图 + 双指缩放/拖拽 + Esc 关闭
-struct ImageZoomSheet: View {
-    let image: NSImage
-    var onDismiss: () -> Void
-
-    var body: some View {
-        VStack(spacing: 0) {
-            HStack {
-                Text("双指捏合缩放 · 双击还原")
-                    .font(.caption)
-                    .foregroundStyle(.tertiary)
-                Spacer()
-                Button("关闭") { onDismiss() }
-                    .keyboardShortcut(.cancelAction)
-                    .padding()
-            }
-            ScrollView([.horizontal, .vertical], showsIndicators: true) {
-                ZoomableImageView(image: image, maxHeight: 600)
-                    .frame(minWidth: 400, minHeight: 300)
-            }
-            .frame(minWidth: 420, minHeight: 360)
+        VStack(spacing: 12) {
+            Image(systemName: "doc.text")
+                .font(.system(size: 48))
+                .foregroundStyle(.tertiary)
+            Text(NSLocalizedString("选择一条记录", comment: ""))
+                .font(.title3)
+                .foregroundStyle(.secondary)
         }
-        .frame(width: 560, height: 520)
-    }
-}
-
-// 脱敏：将包含敏感词的行替换为 [已省略]
-enum SensitiveMaskHelper {
-    static let defaultKeywords = ["密码", "password", "密钥", "key", "token", "api_key", "secret", "私钥", "Secret", "Token", "API_KEY"]
-
-    static func mask(text: String, keywords: [String]) -> String {
-        let lines = text.components(separatedBy: .newlines)
-        return lines.map { line in
-            let lower = line.lowercased()
-            if keywords.contains(where: { lower.contains($0.lowercased()) }) {
-                return "[已省略]"
-            }
-            return line
-        }.joined(separator: "\n")
-    }
-}
-
-// 详情视图（单条全量，用于兼容）
-struct ItemDetailView: View {
-    let item: ClipboardItem
-
-    var body: some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: 20) {
-                HStack {
-                    VStack(alignment: .leading) {
-                        Text(item.timestamp, style: .date)
-                            .font(.headline)
-                        Text(item.timestamp, style: .time)
-                            .font(.subheadline)
-                            .foregroundColor(.secondary)
-                    }
-                    Spacer()
-                    if item.isPinned {
-                        Label("已固定", systemImage: "pin.fill")
-                            .foregroundColor(.orange)
-                    }
-                }
-                .padding(.bottom)
-                Divider()
-                switch item.type {
-                case .image:
-                    if let image = NSImage(contentsOfFile: item.content) {
-                        Image(nsImage: image)
-                            .resizable()
-                            .aspectRatio(contentMode: .fit)
-                            .frame(maxWidth: .infinity)
-                            .cornerRadius(8)
-                            .shadow(radius: 4)
-                    } else {
-                        Text("图片无法加载")
-                            .foregroundColor(.red)
-                    }
-                case .url:
-                    Link(destination: URL(string: item.content) ?? URL(string: "https://")!) {
-                        HStack {
-                            Image(systemName: "safari")
-                            Text(item.content)
-                        }
-                        .font(.title3)
-                    }
-                    .padding()
-                    .background(Color.blue.opacity(0.1))
-                    .cornerRadius(8)
-                case .text:
-                    Text(item.content)
-                        .font(.body)
-                        .textSelection(.enabled)
-                        .padding()
-                        .background(Color(NSColor.textBackgroundColor))
-                        .cornerRadius(8)
-                }
-                Spacer()
-            }
-            .padding()
-        }
-    }
-}
-
-// AI 洞察视图
-struct AIInsightView: View {
-    let items: [ClipboardItem]
-    @Environment(\.dismiss) private var dismiss
-    @State private var insightCards: [InsightCardModel] = []
-    @State private var isLoading = true
-    
-    struct InsightCardModel: Identifiable {
-        let id = UUID()
-        let title: String
-        let content: String
-        let icon: String
-    }
-    
-    var body: some View {
-        VStack {
-            HStack {
-                Text("AI 记忆洞察")
-                    .font(.title2)
-                    .bold()
-                
-                if isLoading {
-                    ProgressView()
-                        .scaleEffect(0.5)
-                        .padding(.leading, 8)
-                }
-                
-                Spacer()
-                Button("关闭") { dismiss() }
-            }
-            .padding()
-            
-            ScrollView {
-                VStack(alignment: .leading, spacing: 16) {
-                    if isLoading {
-                        Text("正在分析您的记忆库...")
-                            .foregroundColor(.secondary)
-                            .frame(maxWidth: .infinity, alignment: .center)
-                            .padding(.top, 50)
-                    } else if insightCards.isEmpty {
-                        Text("暂无足够的文本数据进行分析")
-                            .foregroundColor(.secondary)
-                            .frame(maxWidth: .infinity, alignment: .center)
-                            .padding(.top, 50)
-                    } else {
-                        ForEach(insightCards) { card in
-                            InsightCard(title: card.title, content: card.content)
-                        }
-                    }
-                }
-                .padding()
-            }
-        }
-        .frame(width: 500, height: 600)
-        .onAppear {
-            generateInsights()
-        }
-    }
-    
-    private func generateInsights() {
-        // 先在主线程提取必要的数据 (String 和 Int 是 Sendable 的)
-        let texts = items.filter { $0.type == .text || $0.type == .url }.map(\.content)
-        let imageCount = items.filter { $0.type == .image }.count
-        let totalCount = items.count
-        
-        // 在后台进行分析
-        Task.detached(priority: .userInitiated) {
-            // 模拟或调用简单的本地分析逻辑
-            // 真实场景下，这里可以调用 DailySummaryService 的逻辑，或者更高级的 LLM API
-            
-            // 1. 基础统计
-            let summaryCard = InsightCardModel(
-                title: "📊 数据概览",
-                content: "您当前视图共有 \(totalCount) 条记录。包含 \(imageCount) 张图片，\(texts.count) 段文本。",
-                icon: "chart.bar"
-            )
-            
-            // 2. 关键词提取 (使用 NSLinguisticTagger)
-            let keywords = Self.extractKeywords(from: texts)
-            let keywordCard = InsightCardModel(
-                title: "💡 核心关注点",
-                content: keywords.isEmpty ? "暂无显著关键词" : "您最近关注的内容主要集中在：\(keywords.joined(separator: "、"))",
-                icon: "lightbulb"
-            )
-            
-            // 3. 链接分析
-            let domains = Self.extractDomains(from: texts)
-            let linkCard = InsightCardModel(
-                title: "🌐 知识来源",
-                content: domains.isEmpty ? "暂无外部链接" : "您的信息主要来源于：\(domains.joined(separator: ", "))",
-                icon: "link"
-            )
-            
-            await MainActor.run {
-                self.insightCards = [summaryCard, keywordCard, linkCard]
-                self.isLoading = false
-            }
-        }
-    }
-    
-    // 简单的关键词提取辅助函数
-    nonisolated private static func extractKeywords(from texts: [String]) -> [String] {
-        var wordCounts: [String: Int] = [:]
-        let tagger = NSLinguisticTagger(tagSchemes: [.lexicalClass], options: 0)
-        
-        for text in texts.prefix(50) { // 仅分析前50条以保证性能
-            tagger.string = text
-            let range = NSRange(location: 0, length: text.utf16.count)
-            tagger.enumerateTags(in: range, scheme: .lexicalClass, options: [.omitPunctuation, .omitWhitespace]) { tag, tokenRange, _, _ in
-                if tag == .noun {
-                    let word = (text as NSString).substring(with: tokenRange)
-                    if word.count > 1 {
-                        wordCounts[word, default: 0] += 1
-                    }
-                }
-            }
-        }
-        
-        return wordCounts.sorted { $0.value > $1.value }.prefix(5).map { $0.key }
-    }
-    
-    // 简单的域名提取
-    nonisolated private static func extractDomains(from texts: [String]) -> [String] {
-        var domains: Set<String> = []
-        for text in texts {
-            if let url = URL(string: text), let host = url.host {
-                domains.insert(host)
-            }
-        }
-        return Array(domains.prefix(5))
-    }
-}
-
-struct InsightCard: View {
-    let title: String
-    let content: String
-    
-    var body: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            Text(title)
-                .font(.headline)
-            Text(content)
-                .font(.body)
-                .foregroundColor(.secondary)
-        }
-        .padding()
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .background(Color(NSColor.controlBackgroundColor))
-        .cornerRadius(12)
-        .overlay(
-            RoundedRectangle(cornerRadius: 12)
-                .stroke(Color.gray.opacity(0.2), lineWidth: 1)
-        )
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 }

@@ -19,6 +19,7 @@
 /* Begin PBXFileReference section */
 		DE1F75B82F2904F8004E54F2 /* SimpleClip.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = SimpleClip.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		DE1F75E22F29FB04004E54F2 /* cliptest.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = cliptest.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		DE753BC62F3071D100E9013C /* SimpleClip.xcodeproj */ = {isa = PBXFileReference; lastKnownFileType = "wrapper.pb-project"; path = SimpleClip.xcodeproj; sourceTree = SOURCE_ROOT; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
@@ -55,6 +56,7 @@
 		DE1F75AF2F2904F8004E54F2 = {
 			isa = PBXGroup;
 			children = (
+				DE753BC62F3071D100E9013C /* SimpleClip.xcodeproj */,
 				DE1F75BA2F2904F8004E54F2 /* SimpleClip */,
 				DE1F75E32F29FB04004E54F2 /* cliptest */,
 				DE1F75B92F2904F8004E54F2 /* Products */,
@@ -67,6 +69,11 @@
 				DE1F75B82F2904F8004E54F2 /* SimpleClip.app */,
 				DE1F75E22F29FB04004E54F2 /* cliptest.xctest */,
 			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+		DE5DA2882F309E560066C200 /* Products */ = {
+			isa = PBXGroup;
 			name = Products;
 			sourceTree = "<group>";
 		};
@@ -143,12 +150,19 @@
 			knownRegions = (
 				en,
 				Base,
+				zh,
 			);
 			mainGroup = DE1F75AF2F2904F8004E54F2;
 			minimizedProjectReferenceProxies = 1;
 			preferredProjectObjectVersion = 77;
 			productRefGroup = DE1F75B92F2904F8004E54F2 /* Products */;
 			projectDirPath = "";
+			projectReferences = (
+				{
+					ProductGroup = DE5DA2882F309E560066C200 /* Products */;
+					ProjectRef = DE753BC62F3071D100E9013C /* SimpleClip.xcodeproj */;
+				},
+			);
 			projectRoot = "";
 			targets = (
 				DE1F75B72F2904F8004E54F2 /* SimpleClip */,
@@ -327,18 +341,19 @@
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
 				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 47367AD37J;
 				ENABLE_APP_SANDBOX = YES;
 				ENABLE_PREVIEWS = YES;
 				ENABLE_USER_SELECTED_FILES = readonly;
 				GENERATE_INFOPLIST_FILE = YES;
-				INFOPLIST_KEY_CFBundleDisplayName = "SimpleClip AI";
+				INFOPLIST_KEY_CFBundleDisplayName = "SimpleClip Pro";
 				INFOPLIST_KEY_NSHumanReadableCopyright = "";
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/../Frameworks",
 				);
 				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = "-431.SimpleClip";
+				PRODUCT_BUNDLE_IDENTIFIER = com.hequbing.SimpleClip;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				REGISTER_APP_GROUPS = YES;
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;
@@ -359,18 +374,19 @@
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
 				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 47367AD37J;
 				ENABLE_APP_SANDBOX = YES;
 				ENABLE_PREVIEWS = YES;
 				ENABLE_USER_SELECTED_FILES = readonly;
 				GENERATE_INFOPLIST_FILE = YES;
-				INFOPLIST_KEY_CFBundleDisplayName = "SimpleClip AI";
+				INFOPLIST_KEY_CFBundleDisplayName = "SimpleClip Pro";
 				INFOPLIST_KEY_NSHumanReadableCopyright = "";
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/../Frameworks",
 				);
 				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = "-431.SimpleClip";
+				PRODUCT_BUNDLE_IDENTIFIER = com.yourname.SimpleClip;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				REGISTER_APP_GROUPS = YES;
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;

@@ -21,7 +21,7 @@ struct DailyDigestView: View {
     var body: some View {
         VStack(spacing: 0) {
             HStack {
-                Text("工作日报")
+                Text(NSLocalizedString("工作日报", comment: ""))
                     .font(.headline)
                     .fontWeight(.bold)
                 Spacer()
@@ -34,7 +34,7 @@ struct DailyDigestView: View {
                         if isGenerating {
                             ProgressView().scaleEffect(0.7)
                         } else {
-                            Text("重新生成今日")
+                            Text(NSLocalizedString("重新生成今日", comment: ""))
                                 .font(.caption)
                         }
                     }
@@ -58,15 +58,15 @@ struct DailyDigestView: View {
                     Image(systemName: "doc.text")
                         .font(.system(size: 44))
                         .foregroundStyle(.secondary)
-                    Text("暂无日报")
+                    Text(NSLocalizedString("暂无日报", comment: ""))
                         .foregroundStyle(.secondary)
-                    Text("每日剪贴摘要将在晚间自动生成")
+                    Text(NSLocalizedString("每日剪贴摘要将在晚间自动生成", comment: ""))
                         .font(.caption)
                         .foregroundStyle(.tertiary)
-                    Text("摘要与建议均为本地处理，无网络、无上传。")
+                    Text(NSLocalizedString("摘要与建议均为本地处理，无网络、无上传。", comment: ""))
                         .font(.caption2)
                         .foregroundStyle(.tertiary)
-                    Text("在 macOS 26+ 且开启 Apple Intelligence 时可使用更强本地 AI 摘要与决策建议。")
+                    Text(NSLocalizedString("在 macOS 26+ 且开启 Apple Intelligence 时可使用更强本地 AI 摘要与决策建议。", comment: ""))
                         .font(.caption2)
                         .foregroundStyle(.tertiary)
                         .multilineTextAlignment(.center)
@@ -81,11 +81,11 @@ struct DailyDigestView: View {
                             if isGenerating {
                                 HStack(spacing: 6) {
                                     ProgressView().scaleEffect(0.8)
-                                    Text("生成中…")
+                                    Text(NSLocalizedString("生成中…", comment: ""))
                                         .font(.caption)
                                 }
                             } else {
-                                Text("立即生成今日摘要")
+                                Text(NSLocalizedString("立即生成今日摘要", comment: ""))
                             }
                         }
                         .buttonStyle(.borderedProminent)
@@ -101,7 +101,7 @@ struct DailyDigestView: View {
                             Text(dateLabel(d.date))
                                 .font(.subheadline)
                                 .fontWeight(.medium)
-                            Text("\(d.itemCount) 条")
+                            Text(String(format: NSLocalizedString("%lld 条", comment: ""), d.itemCount))
                                 .font(.caption)
                                 .foregroundStyle(.secondary)
                         }
@@ -121,7 +121,7 @@ struct DailyDigestView: View {
                         .frame(minWidth: 220)
                         .background(Color(NSColor.textBackgroundColor))
                     } else {
-                        Text("选择一天查看摘要")
+                        Text(NSLocalizedString("选择一天查看摘要", comment: ""))
                             .foregroundStyle(.secondary)
                             .frame(maxWidth: .infinity, maxHeight: .infinity)
                     }
@@ -140,15 +140,15 @@ struct DailyDigestView: View {
     private func dateLabel(_ date: Date) -> String {
         let cal = Calendar.current
         if cal.isDateInToday(date) {
-            return "今天"
+            return NSLocalizedString("今天", comment: "")
         }
         if cal.isDateInYesterday(date) {
-            return "昨天"
+            return NSLocalizedString("昨天", comment: "")
         }
         let formatter = DateFormatter()
         formatter.dateStyle = .medium
         formatter.timeStyle = .none
-        formatter.locale = Locale(identifier: "zh_CN")
+        formatter.locale = Locale.current
         return formatter.string(from: date)
     }
 }
