@@ -1,9 +1,6 @@
 <p align="center">
   <h1 align="center">SimpleClip</h1>
-  <p align="center">
-    macOS Clipboard Manager & Personal Work Memory Bank<br/>
-    macOS 剪贴板管理器 & 个人工作记忆库
-  </p>
+  <p align="center"><b>Your Personal Work Memory Bank</b></p>
   <p align="center">
     <img src="https://img.shields.io/badge/platform-macOS%2014%2B-blue" alt="macOS 14+"/>
     <img src="https://img.shields.io/badge/swift-5.9-orange" alt="Swift 5.9"/>
@@ -21,6 +18,16 @@
 <a id="english"></a>
 
 ## English
+
+### Not Just a Clipboard Manager
+
+Every day, you copy and paste dozens — maybe hundreds — of things: code snippets, API keys, URLs, design feedback, meeting notes, error logs. Most clipboard managers treat them as disposable. **SimpleClip treats them as your work memory.**
+
+Think about it: your clipboard is a stream of everything you've touched throughout the day. SimpleClip captures that stream, stores it permanently, and uses on-device AI to turn it into a daily digest — a summary of what you actually worked on, not what your calendar says you did.
+
+**No cloud. No tokens. No subscription. Everything stays on your Mac.**
+
+> Clipboard in, memory out. That's SimpleClip.
 
 ### Features
 
@@ -75,13 +82,15 @@ Or open `SimpleClip.xcodeproj` in Xcode and run directly.
 | Open Manager | Right-click menu bar icon → "Open Manager" |
 | Quit | Right-click menu bar icon → "Quit SimpleClip" |
 
-### Privacy
+### Privacy & PII Protection
 
-SimpleClip is 100% local:
+SimpleClip is built on a simple principle: **your work memory belongs to you, not the cloud.**
+
 - All data stored in on-device SwiftData database
-- AI analysis runs entirely on-device
-- PII (personal names, emails, phone numbers) is automatically redacted before AI processing
+- AI analysis runs entirely on-device (Apple Intelligence / NaturalLanguage)
+- **PII auto-redaction**: Personal names, emails, phone numbers, and addresses are automatically stripped before AI processing — even the local AI only sees sanitized content
 - Zero network requests, zero telemetry, zero data uploads
+- App Sandbox enabled — the app can't access anything outside its container
 
 ### Contributing
 
@@ -98,6 +107,16 @@ PRs and Issues welcome!
 <a id="中文"></a>
 
 ## 中文
+
+### 不只是剪贴板管理器
+
+每天你复制粘贴几十甚至上百次：代码片段、API Key、URL、设计反馈、会议笔记、报错日志。大多数剪贴板工具把它们当作用完即弃的临时数据。**SimpleClip 把它们当作你的工作记忆。**
+
+想想看——你的剪贴板就是你一天工作的信息流。SimpleClip 捕获这条信息流，永久保存，然后用本地 AI 把它变成每日工作摘要——一份关于你**真正做了什么**的总结，而不是日历上写了什么。
+
+**不走云端。不烧 token。不收订阅费。一切都在你的 Mac 上。**
+
+> 剪贴板进，记忆出。这就是 SimpleClip。
 
 ### 功能特性
 
@@ -152,14 +171,15 @@ open build/Build/Products/Debug/SimpleClip.app
 | 打开管理器 | 右键菜单栏图标 → 「打开管理界面」 |
 | 退出应用 | 右键菜单栏图标 → 「退出 SimpleClip」 |
 
-### 隐私
+### 隐私 & PII 保护
 
-SimpleClip 是 100% 本地应用：
+SimpleClip 的设计原则很简单：**你的工作记忆属于你，不属于云端。**
+
 - 所有数据存储在本机 SwiftData 数据库中
-- AI 分析完全在设备端运行
-- PII（个人姓名、邮箱、电话）在 AI 处理前自动脱敏
+- AI 分析完全在设备端运行（Apple Intelligence / NaturalLanguage）
+- **PII 自动脱敏**：个人姓名、邮箱、电话、地址在 AI 处理前自动过滤——即使是本地 AI 也只看到脱敏后的内容
 - 无网络请求，无遥测，无数据上传
-- 你的剪贴板历史只属于你
+- App Sandbox 已启用——应用无法访问容器外的任何内容
 
 ### 贡献
 
@@ -189,14 +209,25 @@ You can freely use, modify, and distribute. Modified versions must also be open-
 
 你可以自由使用、修改和分发。修改后的版本也必须开源。
 
+## Vision / 愿景
+
+The future of personal productivity tools is **local-first AI**. Sensitive data stays on your device; only when you need cloud-level intelligence do you opt in — and even then, PII gets filtered first.
+
+SimpleClip is an early step toward that future: a tool that remembers everything you've worked on, understands the patterns, and keeps your privacy intact.
+
+个人效率工具的未来是**本地优先的 AI**。敏感数据留在设备上；只有当你需要云端级别的智能时才主动选择——即便如此，PII 也会先被过滤。
+
+SimpleClip 是迈向这个未来的早期一步：一个记住你所有工作内容、理解其中规律、同时守住隐私的工具。
+
 ## Roadmap / 未来计划
 
-- [ ] App Store release (SimpleClip Pro)
-- [ ] iCloud Sync
-- [ ] Smarter AI analysis
-- [ ] Custom hotkeys
-- [ ] Plugin system
+- [ ] App Store release (SimpleClip Pro) / App Store 上架
+- [ ] iCloud Sync / iCloud 同步
+- [ ] Deep work pattern analysis / 深度工作模式分析
+- [ ] Cross-app context awareness / 跨应用上下文感知
+- [ ] Custom hotkeys / 自定义快捷键
+- [ ] Plugin system / 插件系统
 
 ---
 
-**Built with Swift & SwiftUI**
+**Built with Swift & SwiftUI. Powered by on-device AI.**
