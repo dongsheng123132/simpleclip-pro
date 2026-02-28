@@ -47,11 +47,14 @@ final class DailySummaryService {
         }
         
         // 在后台生成摘要文本（优先本地 Apple Intelligence，否则 NaturalLanguage）
+        // 先在主线程复制内容为值类型，再送后台处理
         let contents = textAndUrlItems.map(\.content)
-        
+
         // 使用 Task.detached 避免阻塞主线程，但后续写库必须回主线程
         Task.detached(priority: .userInitiated) {
-            let summary = await Self.generateSummary(contents: contents)
+            // PII 过滤：AI 处理前脱敏个人姓名、邮箱、电话等敏感信息
+            let sanitizedContents = contents.map { Self.redactPII($0) }
+            let summary = await Self.generateSummary(contents: sanitizedContents)
 
             await MainActor.run { [weak self] in
                 guard let self = self else { return }
@@ -156,6 +159,53 @@ final class DailySummaryService {
         }
     }
     
+    // MARK: - PII Filtering / 隐私脱敏
+
+    /// 使用 NSDataDetector + NLTagger 脱敏个人信息：姓名、邮箱、电话、地址
+    /// 所有处理 100% 本地，脱敏后的文本才送去 AI 总结
+    nonisolated private static func redactPII(_ text: String) -> String {
+        var result = text
+
+        // 1. NSDataDetector: 邮箱、电话、地址
+        let checkingTypes: NSTextCheckingResult.CheckingType = [.phoneNumber, .address]
+        if let detector = try? NSDataDetector(types: checkingTypes.rawValue) {
+            let matches = detector.matches(in: result, range: NSRange(result.startIndex..., in: result))
+            // 从后往前替换，避免 range 偏移
+            for match in matches.reversed() {
+                guard let range = Range(match.range, in: result) else { continue }
+                if match.resultType == .phoneNumber {
+                    result.replaceSubrange(range, with: "[电话]")
+                } else if match.resultType == .address {
+                    result.replaceSubrange(range, with: "[地址]")
+                }
+            }
+        }
+
+        // 2. 正则: 邮箱地址
+        if let emailRegex = try? NSRegularExpression(pattern: "[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,}") {
+            let range = NSRange(result.startIndex..., in: result)
+            result = emailRegex.stringByReplacingMatches(in: result, range: range, withTemplate: "[邮箱]")
+        }
+
+        // 3. NLTagger: 人名
+        let tagger = NLTagger(tagSchemes: [.nameType])
+        tagger.string = result
+        let tagRange = result.startIndex..<result.endIndex
+        var nameRanges: [Range<String.Index>] = []
+        tagger.enumerateTags(in: tagRange, unit: .word, scheme: .nameType, options: [.omitPunctuation, .omitWhitespace, .joinNames]) { tag, tokenRange in
+            if tag == .personalName {
+                nameRanges.append(tokenRange)
+            }
+            return true
+        }
+        // 从后往前替换
+        for range in nameRanges.reversed() {
+            result.replaceSubrange(range, with: "[姓名]")
+        }
+
+        return result
+    }
+
     /// 使用 NaturalLanguage 生成摘要：关键词、命名实体、链接列表。
     /// 完整段落摘要需 macOS 26+ 的 FoundationModels（Apple Intelligence）；当前为本地关键词提取。
     nonisolated private static func generateSummaryWithNaturalLanguage(contents: [String]) -> String {

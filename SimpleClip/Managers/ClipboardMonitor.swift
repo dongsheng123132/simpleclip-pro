@@ -3,6 +3,7 @@ import AppKit
 import Combine
 import ApplicationServices
 import SwiftData
+import CryptoKit
 
 @MainActor
 final class ClipboardMonitor: NSObject, ObservableObject {
@@ -33,8 +34,8 @@ final class ClipboardMonitor: NSObject, ObservableObject {
 
     func startMonitoring() {
         timer = Timer.scheduledTimer(withTimeInterval: 1.0, repeats: true) { [weak self] _ in
-            Task { @MainActor [weak self] in
-                await self?.checkClipboard()
+            DispatchQueue.main.async { [weak self] in
+                self?.checkClipboard()
             }
         }
         timer?.tolerance = 0.5
@@ -45,7 +46,7 @@ final class ClipboardMonitor: NSObject, ObservableObject {
         timer = nil
     }
 
-    private func checkClipboard() async {
+    private func checkClipboard() {
         let currentChangeCount = NSPasteboard.general.changeCount
         guard currentChangeCount != lastChangeCount else { return }
         lastChangeCount = currentChangeCount
@@ -82,11 +83,13 @@ final class ClipboardMonitor: NSObject, ObservableObject {
             guard !trimmed.isEmpty else { return }
             
             let type: ClipboardType = isValidURL(trimmed) ? .url : .text
-            await addItem(ClipboardItem(content: trimmed, type: type))
+            addItem(ClipboardItem(content: trimmed, type: type))
         }
         // 处理图片
-        else if let image = pasteboard.data(forType: .tiff), let imagePath = saveImage(image) {
-            await addItem(ClipboardItem(content: imagePath, type: .image))
+        else if let image = pasteboard.data(forType: .tiff) {
+            if let (imagePath, imageHash) = saveImageWithHash(image) {
+                addItem(ClipboardItem(content: imagePath, type: .image, imageContentHash: imageHash))
+            }
         }
     }
     
@@ -115,11 +118,21 @@ final class ClipboardMonitor: NSObject, ObservableObject {
         return false
     }
 
-    private func addItem(_ item: ClipboardItem) async {
-        let hashValue = item.contentHash
+    private func addItem(_ item: ClipboardItem) {
+        // 图片类型使用 imageContentHash 去重，文本/URL 使用 contentHash 去重
+        let hashValue: String
+        let predicate: Predicate<ClipboardItem>
+        
+        if item.type == .image, let imgHash = item.imageContentHash {
+            hashValue = imgHash
+            predicate = #Predicate<ClipboardItem> { row in row.imageContentHash == hashValue }
+        } else {
+            hashValue = item.contentHash
+            predicate = #Predicate<ClipboardItem> { row in row.contentHash == hashValue }
+        }
         
         var descriptor = FetchDescriptor<ClipboardItem>(
-            predicate: #Predicate<ClipboardItem> { row in row.contentHash == hashValue },
+            predicate: predicate,
             sortBy: []
         )
         descriptor.fetchLimit = 1
@@ -129,10 +142,12 @@ final class ClipboardMonitor: NSObject, ObservableObject {
                 // 重复内容：更新时间戳，置顶显示
                 existing.timestamp = Date()
                 try modelContext.save()
+                NSLog("🔄 检测到重复内容，更新时间戳: \(existing.preview)")
                 return
             }
             modelContext.insert(item)
             try modelContext.save()
+            NSLog("✅ 添加新剪贴项: \(item.preview)")
         } catch {
             NSLog("❌ 添加剪贴项失败: \(error.localizedDescription)")
         }
@@ -204,7 +219,7 @@ final class ClipboardMonitor: NSObject, ObservableObject {
         }
     }
 
-    private func saveImage(_ imageData: Data) -> String? {
+    private func saveImageWithHash(_ imageData: Data) -> (path: String, hash: String)? {
         let fileManager = FileManager.default
         
         guard let appSupport = fileManager.urls(for: .applicationSupportDirectory, in: .userDomainMask).first else {
@@ -219,6 +234,9 @@ final class ClipboardMonitor: NSObject, ObservableObject {
             return nil
         }
         
+        // 计算原始图片数据的 hash（用于去重）
+        let imageHash = sha256Hex(imageData)
+        
         let filename = "\(UUID().uuidString).png"
         let filePath = clipboardDir.appendingPathComponent(filename)
         
@@ -229,9 +247,14 @@ final class ClipboardMonitor: NSObject, ObservableObject {
         
         do {
             try pngData.write(to: filePath)
-            return filePath.path
+            return (filePath.path, imageHash)
         } catch {
             return nil
         }
+    }
+    
+    private func sha256Hex(_ data: Data) -> String {
+        let digest = SHA256.hash(data: data)
+        return digest.compactMap { String(format: "%02x", $0) }.joined()
     }
 }

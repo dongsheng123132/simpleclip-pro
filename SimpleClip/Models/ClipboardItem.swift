@@ -19,14 +19,16 @@ final class ClipboardItem: Identifiable {
     var timestamp: Date
     var isPinned: Bool
     var contentHash: String
+    var imageContentHash: String?  // 仅图片类型使用：存储图片内容的hash（而非文件路径）
 
-    init(content: String, type: ClipboardType) {
+    init(content: String, type: ClipboardType, imageContentHash: String? = nil) {
         self.id = UUID()
         self.content = content
         self.type = type
         self.timestamp = Date()
         self.isPinned = false
         self.contentHash = Self.sha256Hex(content)
+        self.imageContentHash = imageContentHash
     }
 
     // 显示用的预览文本（不持久化）

@@ -16,6 +16,7 @@ struct SimpleClipApp: App {
     }
 }
 
+@MainActor
 class AppDelegate: NSObject, NSApplicationDelegate {
     var statusItem: NSStatusItem?
     var popover = NSPopover()
@@ -64,8 +65,10 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         // 设置内容视图
         setupPopoverContent()
 
-        // 设置定时器
-        scheduleDailyDigestTimer()
+        // 延迟执行日报生成，确保 SwiftData 完全初始化
+        DispatchQueue.main.async { [weak self] in
+            self?.scheduleDailyDigestTimer()
+        }
         
         // 监听设置变化
         NotificationCenter.default.addObserver(
@@ -73,9 +76,12 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             object: nil,
             queue: .main
         ) { [weak self] _ in
-            self?.dailyDigestTimer?.invalidate()
-            self?.dailyDigestTimer = nil
-            self?.scheduleDailyDigestTimer()
+            guard let self else { return }
+            Task { @MainActor [weak self] in
+                self?.dailyDigestTimer?.invalidate()
+                self?.dailyDigestTimer = nil
+                self?.scheduleDailyDigestTimer()
+            }
         }
 
         // 全局快捷键
@@ -128,9 +134,6 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         monitor = ClipboardMonitor(modelContext: context)
         monitor?.startMonitoring()
         summaryService = DailySummaryService(modelContext: context)
-        if UserDefaults.standard.bool(forKey: "dailyDigestEnabled") != false {
-            summaryService?.tryEnsureTodayDigest()
-        }
     }
     
     private func setupPopoverContent() {
@@ -178,9 +181,12 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         NotificationCenter.default.addObserver(
             forName: NSWindow.willCloseNotification,
             object: window,
-            queue: nil
+            queue: .main
         ) { [weak self] _ in
-            self?.managerWindow = nil
+            guard let self else { return }
+            Task { @MainActor [weak self] in
+                self?.managerWindow = nil
+            }
         }
 
         NSApp.activate(ignoringOtherApps: true)
@@ -290,6 +296,8 @@ class AppDelegate: NSObject, NSApplicationDelegate {
 
     private func scheduleDailyDigestTimer() {
         guard UserDefaults.standard.bool(forKey: "dailyDigestEnabled") != false else { return }
+        // 首次延迟生成今日日报（确保 SwiftData 完全就绪）
+        summaryService?.tryEnsureTodayDigest()
         let hour = UserDefaults.standard.object(forKey: "dailyDigestHour") as? Int ?? 22
         let calendar = Calendar.current
         var components = calendar.dateComponents([.year, .month, .day], from: Date())
@@ -302,9 +310,10 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         }
         let interval = next.timeIntervalSinceNow
         dailyDigestTimer = Timer.scheduledTimer(withTimeInterval: max(interval, 60), repeats: false) { [weak self] _ in
+            guard let self = self else { return }
             Task { @MainActor in
-                self?.summaryService?.tryEnsureTodayDigest()
-                self?.rescheduleDailyDigestTimer()
+                self.summaryService?.tryEnsureTodayDigest()
+                self.rescheduleDailyDigestTimer()
             }
         }
         RunLoop.main.add(dailyDigestTimer!, forMode: .common)
@@ -322,9 +331,10 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         let next = calendar.date(byAdding: .day, value: 1, to: calendar.date(from: components) ?? Date()) ?? Date()
         let interval = next.timeIntervalSinceNow
         dailyDigestTimer = Timer.scheduledTimer(withTimeInterval: interval, repeats: false) { [weak self] _ in
+            guard let self = self else { return }
             Task { @MainActor in
-                self?.summaryService?.tryEnsureTodayDigest()
-                self?.rescheduleDailyDigestTimer()
+                self.summaryService?.tryEnsureTodayDigest()
+                self.rescheduleDailyDigestTimer()
             }
         }
         RunLoop.main.add(dailyDigestTimer!, forMode: .common)
