@@ -105,20 +105,20 @@ jobs:
 
       - name: Deploy appcast to GitHub Pages
         run: |
+          # Save appcast to temp location
+          cp appcast.xml /tmp/appcast.xml
+
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
 
-          # Create or update gh-pages branch
-          git fetch origin gh-pages 2>/dev/null || true
+          # Create orphan branch for GitHub Pages
           git checkout --orphan gh-pages-tmp
           git rm -rf . 2>/dev/null || true
-          cp appcast.xml .
+          find . -maxdepth 1 ! -name '.git' ! -name '.' -exec rm -rf {} + 2>/dev/null || true
+          cp /tmp/appcast.xml appcast.xml
           git add appcast.xml
           git commit -m "Update appcast.xml for ${GITHUB_REF_NAME}"
           git push origin HEAD:gh-pages --force
-
-          # Switch back
-          git checkout "${GITHUB_REF_NAME}" 2>/dev/null || git checkout main
 
       - name: Create Release
         uses: softprops/action-gh-release@v2
