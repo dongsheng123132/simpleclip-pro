@@ -27,10 +27,23 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     var container: ModelContainer?
     var dailyDigestTimer: Timer?
 
+    /// 固定的数据存储目录（不依赖沙盒容器，签名变化也不影响）
+    private static let appSupportURL: URL = {
+        let base = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first!
+        let dir = base.appendingPathComponent("SimpleClip")
+        try? FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
+        return dir
+    }()
+
     func applicationDidFinishLaunching(_ notification: Notification) {
-        // 初始化 SwiftData - 优雅降级处理
+        // 一次性迁移：从旧沙盒容器迁移数据
+        Self.migrateFromOldContainersIfNeeded()
+
+        // 初始化 SwiftData — 指定固定路径
         do {
-            container = try ModelContainer(for: ClipboardItem.self, DailyDigest.self)
+            let storeURL = Self.appSupportURL.appendingPathComponent("SimpleClip.store")
+            let config = ModelConfiguration(url: storeURL)
+            container = try ModelContainer(for: ClipboardItem.self, DailyDigest.self, configurations: config)
         } catch {
             NSLog("❌ 数据库初始化失败: \(error)")
             showDatabaseErrorAlert(error: error)
@@ -257,6 +270,45 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             }
         }
         NSApplication.shared.terminate(nil)
+    }
+
+    // MARK: - Data Migration
+
+    /// 从旧沙盒容器迁移数据（一次性，迁移完打标记不再执行）
+    private static func migrateFromOldContainersIfNeeded() {
+        let fm = FileManager.default
+        let targetStore = appSupportURL.appendingPathComponent("SimpleClip.store")
+
+        // 已有数据或已迁移过，跳过
+        if fm.fileExists(atPath: targetStore.path) { return }
+
+        // 按优先级查找旧数据：容器内 > Application Support 裸文件
+        let home = fm.homeDirectoryForCurrentUser
+        let candidates = [
+            home.appendingPathComponent("Library/Containers/com.hequbing.SimpleClip/Data/Library/Application Support/default.store"),
+            home.appendingPathComponent("Library/Application Support/default.store"),
+        ]
+
+        for oldStore in candidates {
+            if fm.fileExists(atPath: oldStore.path) {
+                do {
+                    try fm.copyItem(at: oldStore, to: targetStore)
+                    // 同时复制 WAL/SHM（如果有）
+                    for suffix in ["-wal", "-shm"] {
+                        let src = URL(fileURLWithPath: oldStore.path + suffix)
+                        let dst = URL(fileURLWithPath: targetStore.path + suffix)
+                        if fm.fileExists(atPath: src.path) {
+                            try? fm.copyItem(at: src, to: dst)
+                        }
+                    }
+                    NSLog("✅ 数据迁移成功: \(oldStore.path) → \(targetStore.path)")
+                    return
+                } catch {
+                    NSLog("⚠️ 数据迁移失败: \(error.localizedDescription)")
+                }
+            }
+        }
+        NSLog("ℹ️ 无旧数据需要迁移，首次使用")
     }
 
     // MARK: - Permissions & HotKey

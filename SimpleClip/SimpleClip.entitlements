@@ -3,9 +3,6 @@
 <plist version="1.0">
 <dict>
     <key>com.apple.security.app-sandbox</key>
-    <true/>
-    <key>com.apple.security.network.client</key>
-    <true/>
-    <!-- 如果需要保存文件到特定位置，可能需要更多权限 -->
+    <false/>
 </dict>
 </plist>
