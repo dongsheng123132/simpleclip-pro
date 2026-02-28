@@ -56,10 +56,10 @@ Think about it: your clipboard is a stream of everything you've touched througho
 1. Go to the [Releases](../../releases) page
 2. Download the latest `SimpleClip.dmg`
 3. Open the DMG and drag SimpleClip to your Applications folder
-4. **First launch**: Since the app is unsigned, macOS will block it:
-   - Right-click SimpleClip.app → Select "Open"
-   - Click "Open" in the dialog
-   - Or: System Settings → Privacy & Security → Click "Open Anyway"
+4. **First launch**: macOS may block unsigned apps. Fix with **one** of these:
+   - **Terminal** (recommended): `xattr -cr /Applications/SimpleClip.app`
+   - Right-click SimpleClip.app → Select "Open" → Click "Open"
+   - System Settings → Privacy & Security → Click "Open Anyway"
 
 #### Option 2: Build from Source
 
@@ -145,10 +145,10 @@ PRs and Issues welcome!
 1. 前往 [Releases](../../releases) 页面
 2. 下载最新的 `SimpleClip.dmg`
 3. 打开 DMG，拖拽 SimpleClip 到应用程序文件夹
-4. **首次打开**：由于未签名，macOS 会阻止运行：
-   - 右键点击 SimpleClip.app → 选择「打开」
-   - 在弹出的对话框中点击「打开」
-   - 或者：系统设置 → 隐私与安全性 → 点击「仍要打开」
+4. **首次打开**：macOS 可能阻止未签名应用，用以下**任一**方法解决：
+   - **终端**（推荐）：`xattr -cr /Applications/SimpleClip.app`
+   - 右键点击 SimpleClip.app → 选择「打开」→ 点击「打开」
+   - 系统设置 → 隐私与安全性 → 点击「仍要打开」
 
 #### 方式二：从源码构建
 

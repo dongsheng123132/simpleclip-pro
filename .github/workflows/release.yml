@@ -18,32 +18,43 @@ jobs:
       - name: Select Xcode
         run: sudo xcode-select -s /Applications/Xcode_16.2.app/Contents/Developer
 
-      - name: Build
+      - name: Build Universal Binary
         run: |
           xcodebuild -project SimpleClip.xcodeproj \
             -scheme SimpleClip \
             -configuration Release \
             -derivedDataPath build \
-            CODE_SIGN_IDENTITY="" \
+            -arch arm64 -arch x86_64 \
+            CODE_SIGN_IDENTITY="-" \
             CODE_SIGNING_REQUIRED=NO \
-            CODE_SIGNING_ALLOWED=NO
+            CODE_SIGNING_ALLOWED=YES \
+            ONLY_ACTIVE_ARCH=NO
+
+      - name: Ad-hoc Sign
+        run: |
+          APP_PATH="build/Build/Products/Release/SimpleClip.app"
+          codesign --force --deep --sign - "$APP_PATH"
+          echo "App size:"
+          du -sh "$APP_PATH"
+          echo "Binary architectures:"
+          file "$APP_PATH/Contents/MacOS/SimpleClip"
 
       - name: Create DMG
         run: |
           APP_PATH="build/Build/Products/Release/SimpleClip.app"
           DMG_NAME="SimpleClip-${GITHUB_REF_NAME}.dmg"
 
-          # Create a temporary directory for DMG contents
           mkdir -p dmg_contents
           cp -R "$APP_PATH" dmg_contents/
           ln -s /Applications dmg_contents/Applications
 
-          # Create DMG
           hdiutil create -volname "SimpleClip" \
             -srcfolder dmg_contents \
             -ov -format UDZO \
             "$DMG_NAME"
 
+          echo "DMG size:"
+          ls -lh "$DMG_NAME"
           echo "DMG_NAME=$DMG_NAME" >> $GITHUB_ENV
 
       - name: Create Release
