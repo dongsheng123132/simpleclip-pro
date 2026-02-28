@@ -7,6 +7,7 @@ on:
 
 permissions:
   contents: write
+  pages: write
 
 jobs:
   build:
@@ -17,6 +18,9 @@ jobs:
 
       - name: Select Xcode
         run: sudo xcode-select -s /Applications/Xcode_16.2.app/Contents/Developer
+
+      - name: Resolve Packages
+        run: xcodebuild -project SimpleClip.xcodeproj -scheme SimpleClip -resolvePackageDependencies
 
       - name: Build Universal Binary
         run: |
@@ -36,8 +40,6 @@ jobs:
           codesign --force --deep --sign - "$APP_PATH"
           echo "App size:"
           du -sh "$APP_PATH"
-          echo "Binary architectures:"
-          file "$APP_PATH/Contents/MacOS/SimpleClip"
 
       - name: Create DMG
         run: |
@@ -56,6 +58,67 @@ jobs:
           echo "DMG size:"
           ls -lh "$DMG_NAME"
           echo "DMG_NAME=$DMG_NAME" >> $GITHUB_ENV
+
+      - name: Sign DMG with Sparkle EdDSA
+        env:
+          SPARKLE_PRIVATE_KEY: ${{ secrets.SPARKLE_PRIVATE_KEY }}
+        run: |
+          SPARKLE_BIN=$(find build/SourcePackages/artifacts -path "*/Sparkle/bin" -type d | head -1)
+          echo "$SPARKLE_PRIVATE_KEY" > /tmp/sparkle_key
+          SIGNATURE=$(echo "$SPARKLE_PRIVATE_KEY" | "$SPARKLE_BIN/sign_update" "$DMG_NAME" --ed-key-file /tmp/sparkle_key 2>&1)
+          rm /tmp/sparkle_key
+          echo "Sparkle signature: $SIGNATURE"
+          echo "SPARKLE_SIG=$SIGNATURE" >> $GITHUB_ENV
+
+      - name: Generate appcast.xml
+        run: |
+          VERSION="${GITHUB_REF_NAME#v}"
+          DMG_SIZE=$(stat -f%z "$DMG_NAME")
+          DMG_URL="https://github.com/dongsheng123132/simpleclip-pro/releases/download/${GITHUB_REF_NAME}/${DMG_NAME}"
+
+          # Parse edSignature and length from Sparkle output
+          ED_SIGNATURE=$(echo "$SPARKLE_SIG" | grep -o 'sparkle:edSignature="[^"]*"' | cut -d'"' -f2)
+          SIG_LENGTH=$(echo "$SPARKLE_SIG" | grep -o 'length="[^"]*"' | cut -d'"' -f2)
+
+          cat > appcast.xml << APPCAST_EOF
+          <?xml version="1.0" encoding="utf-8"?>
+          <rss version="2.0" xmlns:sparkle="http://www.andymatuschak.org/xml-namespaces/sparkle" xmlns:dc="http://purl.org/dc/elements/1.1/">
+            <channel>
+              <title>SimpleClip Updates</title>
+              <link>https://dongsheng123132.github.io/simpleclip-pro/appcast.xml</link>
+              <item>
+                <title>Version ${VERSION}</title>
+                <pubDate>$(date -R)</pubDate>
+                <sparkle:version>${VERSION}</sparkle:version>
+                <sparkle:shortVersionString>${VERSION}</sparkle:shortVersionString>
+                <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
+                <enclosure url="${DMG_URL}"
+                           ${SPARKLE_SIG}
+                           type="application/octet-stream"/>
+              </item>
+            </channel>
+          </rss>
+          APPCAST_EOF
+
+          echo "Generated appcast.xml:"
+          cat appcast.xml
+
+      - name: Deploy appcast to GitHub Pages
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+          # Create or update gh-pages branch
+          git fetch origin gh-pages 2>/dev/null || true
+          git checkout --orphan gh-pages-tmp
+          git rm -rf . 2>/dev/null || true
+          cp appcast.xml .
+          git add appcast.xml
+          git commit -m "Update appcast.xml for ${GITHUB_REF_NAME}"
+          git push origin HEAD:gh-pages --force
+
+          # Switch back
+          git checkout "${GITHUB_REF_NAME}" 2>/dev/null || git checkout main
 
       - name: Create Release
         uses: softprops/action-gh-release@v2

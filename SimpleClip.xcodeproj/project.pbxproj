@@ -97,6 +97,7 @@
 			);
 			name = SimpleClip;
 			packageProductDependencies = (
+				AA000002SPARKLE00000002 /* Sparkle */,
 			);
 			productName = SimpleClip;
 			productReference = DE1F75B82F2904F8004E54F2 /* SimpleClip.app */;
@@ -162,6 +163,9 @@
 					ProductGroup = DE5DA2882F309E560066C200 /* Products */;
 					ProjectRef = DE753BC62F3071D100E9013C /* SimpleClip.xcodeproj */;
 				},
+			);
+			packageReferences = (
+				AA000001SPARKLE00000001 /* XCRemoteSwiftPackageReference "Sparkle" */,
 			);
 			projectRoot = "";
 			targets = (
@@ -340,7 +344,7 @@
 				CODE_SIGN_ENTITLEMENTS = SimpleClip/SimpleClip.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
-				CURRENT_PROJECT_VERSION = 2;
+				CURRENT_PROJECT_VERSION = 3;
 				DEVELOPMENT_TEAM = 47367AD37J;
 				ENABLE_APP_SANDBOX = NO;
 				ENABLE_PREVIEWS = YES;
@@ -348,11 +352,13 @@
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_CFBundleDisplayName = "SimpleClip Pro";
 				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				INFOPLIST_KEY_SUFeedURL = "https://dongsheng123132.github.io/simpleclip-pro/appcast.xml";
+				INFOPLIST_KEY_SUPublicEDKey = "Z0+yejBK2e9HCaG7ja0xtIoliG8lTwaa/U2gfZLiL7E=";
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/../Frameworks",
 				);
-				MARKETING_VERSION = 1.2;
+				MARKETING_VERSION = 1.3;
 				PRODUCT_BUNDLE_IDENTIFIER = com.hequbing.SimpleClip;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				REGISTER_APP_GROUPS = YES;
@@ -373,7 +379,7 @@
 				CODE_SIGN_ENTITLEMENTS = SimpleClip/SimpleClip.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
-				CURRENT_PROJECT_VERSION = 2;
+				CURRENT_PROJECT_VERSION = 3;
 				DEVELOPMENT_TEAM = 47367AD37J;
 				ENABLE_APP_SANDBOX = NO;
 				ENABLE_PREVIEWS = YES;
@@ -381,11 +387,13 @@
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_CFBundleDisplayName = "SimpleClip Pro";
 				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				INFOPLIST_KEY_SUFeedURL = "https://dongsheng123132.github.io/simpleclip-pro/appcast.xml";
+				INFOPLIST_KEY_SUPublicEDKey = "Z0+yejBK2e9HCaG7ja0xtIoliG8lTwaa/U2gfZLiL7E=";
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/../Frameworks",
 				);
-				MARKETING_VERSION = 1.2;
+				MARKETING_VERSION = 1.3;
 				PRODUCT_BUNDLE_IDENTIFIER = com.hequbing.SimpleClip;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				REGISTER_APP_GROUPS = YES;
@@ -402,9 +410,9 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 2;
+				CURRENT_PROJECT_VERSION = 3;
 				GENERATE_INFOPLIST_FILE = YES;
-				MARKETING_VERSION = 1.2;
+				MARKETING_VERSION = 1.3;
 				PRODUCT_BUNDLE_IDENTIFIER = "-431.cliptest";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				STRING_CATALOG_GENERATE_SYMBOLS = NO;
@@ -420,9 +428,9 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 2;
+				CURRENT_PROJECT_VERSION = 3;
 				GENERATE_INFOPLIST_FILE = YES;
-				MARKETING_VERSION = 1.2;
+				MARKETING_VERSION = 1.3;
 				PRODUCT_BUNDLE_IDENTIFIER = "-431.cliptest";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				STRING_CATALOG_GENERATE_SYMBOLS = NO;
@@ -465,6 +473,25 @@
 			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
+
+/* Begin XCRemoteSwiftPackageReference section */
+		AA000001SPARKLE00000001 /* XCRemoteSwiftPackageReference "Sparkle" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/sparkle-project/Sparkle";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 2.6.0;
+			};
+		};
+/* End XCRemoteSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		AA000002SPARKLE00000002 /* Sparkle */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = AA000001SPARKLE00000001 /* XCRemoteSwiftPackageReference "Sparkle" */;
+			productName = Sparkle;
+		};
+/* End XCSwiftPackageProductDependency section */
 	};
 	rootObject = DE1F75B02F2904F8004E54F2 /* Project object */;
 }

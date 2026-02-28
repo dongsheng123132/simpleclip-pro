@@ -1,5 +1,6 @@
 import SwiftUI
 import SwiftData
+import Sparkle
 
 extension Notification.Name {
     static let switchManagerCategory = Notification.Name("switchManagerCategory")
@@ -20,12 +21,13 @@ struct SimpleClipApp: App {
 class AppDelegate: NSObject, NSApplicationDelegate {
     var statusItem: NSStatusItem?
     var popover = NSPopover()
-    var managerWindow: NSWindow? // 记忆库管理窗口
+    var managerWindow: NSWindow?
     var monitor: ClipboardMonitor?
     var summaryService: DailySummaryService?
     var eventMonitor: Any?
     var container: ModelContainer?
     var dailyDigestTimer: Timer?
+    var updaterController: SPUStandardUpdaterController!
 
     /// 固定的数据存储目录（不依赖沙盒容器，签名变化也不影响）
     private static let appSupportURL: URL = {
@@ -49,6 +51,9 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             showDatabaseErrorAlert(error: error)
             return
         }
+
+        // 初始化 Sparkle 自动更新
+        updaterController = SPUStandardUpdaterController(startingUpdater: true, updaterDelegate: nil, userDriverDelegate: nil)
 
         // 创建菜单栏图标
         statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
@@ -237,6 +242,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     private func showContextMenu() {
         let menu = NSMenu()
         menu.addItem(NSMenuItem(title: "打开管理界面", action: #selector(openManager), keyEquivalent: "m"))
+        menu.addItem(NSMenuItem(title: "检查更新…", action: #selector(checkForUpdates), keyEquivalent: "u"))
         menu.addItem(NSMenuItem.separator())
         menu.addItem(NSMenuItem(title: "退出 SimpleClip", action: #selector(quitApp), keyEquivalent: "q"))
         
@@ -248,7 +254,11 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     @objc func openManager() {
         openManagerWindow()
     }
-    
+
+    @objc func checkForUpdates() {
+        updaterController.checkForUpdates(nil)
+    }
+
     @objc func quitApp() {
         NSApplication.shared.terminate(nil)
     }
