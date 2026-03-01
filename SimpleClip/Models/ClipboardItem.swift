@@ -20,6 +20,7 @@ final class ClipboardItem: Identifiable {
     var isPinned: Bool
     var contentHash: String
     var imageContentHash: String?  // 仅图片类型使用：存储图片内容的hash（而非文件路径）
+    var copyCount: Int
 
     init(content: String, type: ClipboardType, imageContentHash: String? = nil) {
         self.id = UUID()
@@ -29,6 +30,7 @@ final class ClipboardItem: Identifiable {
         self.isPinned = false
         self.contentHash = Self.sha256Hex(content)
         self.imageContentHash = imageContentHash
+        self.copyCount = 1
     }
 
     // 显示用的预览文本（不持久化）

@@ -139,10 +139,11 @@ final class ClipboardMonitor: NSObject, ObservableObject {
         
         do {
             if let existing = try modelContext.fetch(descriptor).first {
-                // 重复内容：更新时间戳，置顶显示
+                // 重复内容：更新时间戳 + 复制次数 +1
                 existing.timestamp = Date()
+                existing.copyCount += 1
                 try modelContext.save()
-                NSLog("🔄 检测到重复内容，更新时间戳: \(existing.preview)")
+                NSLog("🔄 检测到重复内容(第\(existing.copyCount)次): \(existing.preview)")
                 return
             }
             modelContext.insert(item)
