@@ -51,26 +51,38 @@ Think about it: your clipboard is a stream of everything you've touched througho
 
 ### Installation
 
-#### Option 1: Download (Recommended)
-
-1. Go to the [Releases](../../releases) page
-2. Download the latest `SimpleClip.dmg`
-3. Open the DMG and drag SimpleClip to your Applications folder
-4. **First launch**: macOS may block unsigned apps. Fix with **one** of these:
-   - **Terminal** (recommended): `xattr -cr /Applications/SimpleClip.app`
-   - Right-click SimpleClip.app → Select "Open" → Click "Open"
-   - System Settings → Privacy & Security → Click "Open Anyway"
-
-#### Option 2: Build from Source
+#### Option 1: Homebrew (Recommended)
 
 ```bash
-git clone https://github.com/YOUR_USERNAME/SimpleClip.git
-cd SimpleClip
+brew tap dongsheng123132/tap
+brew install --cask simpleclip
+```
+
+Auto-downloads, installs, and handles macOS security — no manual steps needed. Update with `brew upgrade --cask simpleclip`.
+
+#### Option 2: One-Line Install Script
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/dongsheng123132/simpleclip-pro/main/install.sh | bash
+```
+
+Auto-downloads latest DMG, installs to /Applications, removes quarantine, and launches.
+
+#### Option 3: Manual Download
+
+1. Go to the [Releases](../../releases) page
+2. Download the latest `SimpleClip-vX.X.X.dmg`
+3. Open the DMG and drag SimpleClip to your Applications folder
+4. **First launch**: Run `xattr -cr /Applications/SimpleClip.app` in Terminal (the app is not code-signed)
+
+#### Option 4: Build from Source
+
+```bash
+git clone https://github.com/dongsheng123132/simpleclip-pro.git
+cd simpleclip-pro
 xcodebuild -project SimpleClip.xcodeproj -scheme SimpleClip build
 open build/Build/Products/Debug/SimpleClip.app
 ```
-
-Or open `SimpleClip.xcodeproj` in Xcode and run directly.
 
 ### Usage
 
@@ -140,26 +152,38 @@ PRs and Issues welcome!
 
 ### 安装
 
-#### 方式一：直接下载（推荐）
-
-1. 前往 [Releases](../../releases) 页面
-2. 下载最新的 `SimpleClip.dmg`
-3. 打开 DMG，拖拽 SimpleClip 到应用程序文件夹
-4. **首次打开**：macOS 可能阻止未签名应用，用以下**任一**方法解决：
-   - **终端**（推荐）：`xattr -cr /Applications/SimpleClip.app`
-   - 右键点击 SimpleClip.app → 选择「打开」→ 点击「打开」
-   - 系统设置 → 隐私与安全性 → 点击「仍要打开」
-
-#### 方式二：从源码构建
+#### 方式一：Homebrew（推荐）
 
 ```bash
-git clone https://github.com/YOUR_USERNAME/SimpleClip.git
-cd SimpleClip
+brew tap dongsheng123132/tap
+brew install --cask simpleclip
+```
+
+自动下载、安装、处理 macOS 安全限制，无需手动操作。更新：`brew upgrade --cask simpleclip`
+
+#### 方式二：一键安装脚本
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/dongsheng123132/simpleclip-pro/main/install.sh | bash
+```
+
+自动下载最新 DMG、安装到 /Applications、去除隔离标记并启动。
+
+#### 方式三：手动下载
+
+1. 前往 [Releases](../../releases) 页面
+2. 下载最新的 `SimpleClip-vX.X.X.dmg`
+3. 打开 DMG，拖拽 SimpleClip 到应用程序文件夹
+4. **首次打开**：终端运行 `xattr -cr /Applications/SimpleClip.app`（应用未签名，需手动解除限制）
+
+#### 方式四：从源码构建
+
+```bash
+git clone https://github.com/dongsheng123132/simpleclip-pro.git
+cd simpleclip-pro
 xcodebuild -project SimpleClip.xcodeproj -scheme SimpleClip build
 open build/Build/Products/Debug/SimpleClip.app
 ```
-
-或者用 Xcode 打开 `SimpleClip.xcodeproj` 直接运行。
 
 ### 使用方法
 

@@ -132,3 +132,47 @@ jobs:
           draft: false
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Update Homebrew Cask
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          VERSION="${GITHUB_REF_NAME#v}"
+          SHA256=$(shasum -a 256 "$DMG_NAME" | awk '{print $1}')
+
+          git clone https://x-access-token:${GITHUB_TOKEN}@github.com/dongsheng123132/homebrew-tap.git /tmp/homebrew-tap
+          cd /tmp/homebrew-tap
+
+          mkdir -p Casks
+          cat > Casks/simpleclip.rb << 'CASK_EOF'
+          cask "simpleclip" do
+          CASK_EOF
+
+          cat >> Casks/simpleclip.rb << CASK_EOF
+            version "${VERSION}"
+            sha256 "${SHA256}"
+
+            url "https://github.com/dongsheng123132/simpleclip-pro/releases/download/v#{version}/SimpleClip-v#{version}.dmg"
+            name "SimpleClip"
+            desc "Personal Work Memory Bank - Clipboard manager with local AI"
+            homepage "https://github.com/dongsheng123132/simpleclip-pro"
+
+            app "SimpleClip.app"
+
+            postflight do
+              system_command "/usr/bin/xattr",
+                             args: ["-cr", "#{appdir}/SimpleClip.app"],
+                             sudo: false
+            end
+
+            zap trash: [
+              "~/Library/Application Support/SimpleClip",
+            ]
+          end
+          CASK_EOF
+
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add Casks/simpleclip.rb
+          git commit -m "Update SimpleClip to ${VERSION}" || true
+          git push origin main
