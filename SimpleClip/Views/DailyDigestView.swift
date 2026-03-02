@@ -172,6 +172,12 @@ struct DailyDigestView: View {
         }
     }
 
+    /// 是否为中国大陆区域（通过系统 Locale 检测）
+    private var isChinaRegion: Bool {
+        let regionCode = Locale.current.region?.identifier ?? Locale.current.identifier
+        return regionCode == "CN" || regionCode.contains("zh_CN") || regionCode.contains("zh-Hans_CN")
+    }
+
     @ViewBuilder
     private var runtimeAIBanner: some View {
         #if canImport(FoundationModels)
@@ -186,13 +192,23 @@ struct DailyDigestView: View {
                     subtitle: "使用本地 AI 生成智能摘要与建议"
                 )
             default:
-                aiBanner(
-                    icon: "exclamationmark.triangle.fill",
-                    color: .orange,
-                    title: "Apple Intelligence 不可用",
-                    subtitle: "当前使用关键词提取模式，点击查看详情"
-                )
-                .onTapGesture { showAIInfo = true }
+                if isChinaRegion {
+                    aiBanner(
+                        icon: "exclamationmark.triangle.fill",
+                        color: .red,
+                        title: "中国大陆设备暂不支持 Apple Intelligence",
+                        subtitle: "当前使用关键词提取模式（硬件级限制，非软件可绕过）点击了解详情"
+                    )
+                    .onTapGesture { showAIInfo = true }
+                } else {
+                    aiBanner(
+                        icon: "exclamationmark.triangle.fill",
+                        color: .orange,
+                        title: "Apple Intelligence 不可用",
+                        subtitle: "当前使用关键词提取模式，点击查看如何开启"
+                    )
+                    .onTapGesture { showAIInfo = true }
+                }
             }
         }
         #endif
