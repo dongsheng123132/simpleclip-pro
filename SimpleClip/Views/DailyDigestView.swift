@@ -29,10 +29,14 @@ struct DailyDigestView: View {
                     Button(action: {
                         isGenerating = true
                         onRegenerate()
-                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) { isGenerating = false }
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 3.0) { isGenerating = false }
                     }) {
                         if isGenerating {
-                            ProgressView().scaleEffect(0.7)
+                            HStack(spacing: 4) {
+                                ProgressView().scaleEffect(0.7)
+                                Text(NSLocalizedString("生成中…", comment: ""))
+                                    .font(.caption)
+                            }
                         } else {
                             Text(NSLocalizedString("重新生成今日", comment: ""))
                                 .font(.caption)
@@ -76,7 +80,7 @@ struct DailyDigestView: View {
                         Button(action: {
                             isGenerating = true
                             onGenerate()
-                            DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) { isGenerating = false }
+                            DispatchQueue.main.asyncAfter(deadline: .now() + 3.0) { isGenerating = false }
                         }) {
                             if isGenerating {
                                 HStack(spacing: 6) {

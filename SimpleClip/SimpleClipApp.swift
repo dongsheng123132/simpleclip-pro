@@ -227,12 +227,14 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             showContextMenu()
             return
         }
-        
+
         // 左键切换 Popover
         if let button = statusItem?.button {
             if popover.isShown {
                 popover.performClose(nil)
             } else {
+                // 重建 contentViewController 防止长时间运行后窗口动画对象悬空
+                setupPopoverContent()
                 popover.show(relativeTo: button.bounds, of: button, preferredEdge: .minY)
                 NSApp.activate(ignoringOtherApps: true)
             }
