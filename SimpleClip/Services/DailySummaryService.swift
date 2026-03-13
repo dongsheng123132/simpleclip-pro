@@ -48,12 +48,12 @@ final class DailySummaryService {
         
         // 在后台生成摘要文本（优先本地 Apple Intelligence，否则 NaturalLanguage）
         // 先在主线程复制内容为值类型，再送后台处理
-        let contents = textAndUrlItems.map(\.content)
+        let contents = textAndUrlItems.map(\.decryptedContent)
 
         // 使用 Task.detached 避免阻塞主线程，但后续写库必须回主线程
         Task.detached(priority: .userInitiated) {
             // PII 过滤：AI 处理前脱敏个人姓名、邮箱、电话等敏感信息
-            let sanitizedContents = contents.map { PIIRedactor.redact($0) }
+            let sanitizedContents = contents.map { PIIDetector.redact($0) }
             let summary = await Self.generateSummary(contents: sanitizedContents)
 
             await MainActor.run { [weak self] in
@@ -159,8 +159,6 @@ final class DailySummaryService {
         }
     }
     
-    // MARK: - NaturalLanguage Summary Fallback
-
     /// 使用 NaturalLanguage 生成摘要：关键词、命名实体、链接列表。
     /// 完整段落摘要需 macOS 26+ 的 FoundationModels（Apple Intelligence）；当前为本地关键词提取。
     nonisolated private static func generateSummaryWithNaturalLanguage(contents: [String]) -> String {

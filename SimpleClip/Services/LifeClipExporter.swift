@@ -1,30 +1,41 @@
 import Foundation
 import SwiftData
+import CryptoKit
 
-/// Exports clipboard items to ~/.lifeclip/events/ as JSONL for the LifeClip ecosystem.
-/// Runs on a 5-minute timer, exporting only new items since last export.
+/// Exports clipboard events to LifeClip JSONL format.
+/// Writes to ~/.lifeclip/events/YYYY-MM-DD.jsonl (append mode).
 @MainActor
 final class LifeClipExporter {
     private let modelContext: ModelContext
     private var timer: Timer?
-    private var lastExportDate: Date
 
-    private static let lifeclipDir: URL = {
+    /// Key for UserDefaults: last export timestamp
+    private static let lastExportDateKey = "lifeClipLastExportDate"
+    /// Key for UserDefaults: total exported count
+    private static let exportedCountKey = "lifeClipExportedCount"
+    /// Key for UserDefaults: export enabled toggle
+    static let enabledKey = "lifeClipExportEnabled"
+
+    private static let eventsDirectory: URL = {
         let home = FileManager.default.homeDirectoryForCurrentUser
         return home.appendingPathComponent(".lifeclip/events")
     }()
 
     init(modelContext: ModelContext) {
         self.modelContext = modelContext
-        self.lastExportDate = Self.loadLastExportDate()
     }
 
-    func startExporting() {
-        // Ensure directory exists
-        try? FileManager.default.createDirectory(at: Self.lifeclipDir, withIntermediateDirectories: true)
-        // Export immediately on start
+    // MARK: - Timer
+
+    func startIfEnabled() {
+        guard UserDefaults.standard.bool(forKey: Self.enabledKey) else { return }
+        start()
+    }
+
+    func start() {
+        timer?.invalidate()
+        // Export immediately, then every 5 minutes
         exportNewItems()
-        // Then every 5 minutes
         timer = Timer.scheduledTimer(withTimeInterval: 300, repeats: true) { [weak self] _ in
             guard let self else { return }
             Task { @MainActor in
@@ -32,122 +43,169 @@ final class LifeClipExporter {
             }
         }
         if let timer { RunLoop.main.add(timer, forMode: .common) }
-        NSLog("✓ LifeClip 导出服务已启动")
     }
 
-    func stopExporting() {
+    func stop() {
         timer?.invalidate()
         timer = nil
     }
 
-    private func exportNewItems() {
-        let since = lastExportDate
+    // MARK: - Export Logic
+
+    func exportNewItems() {
+        let lastExportDate = UserDefaults.standard.object(forKey: Self.lastExportDateKey) as? Date ?? Date.distantPast
+        NSLog("LifeClip: exporting items since \(lastExportDate)")
+
         let descriptor = FetchDescriptor<ClipboardItem>(
             predicate: #Predicate<ClipboardItem> { item in
-                item.timestamp > since
+                item.timestamp > lastExportDate
             },
-            sortBy: [SortDescriptor(\.timestamp)]
+            sortBy: [SortDescriptor(\.timestamp, order: .forward)]
         )
-        guard let items = try? modelContext.fetch(descriptor), !items.isEmpty else { return }
 
-        // Group by date
-        let calendar = Calendar.current
-        var grouped: [String: [ClipboardItem]] = [:]
-        for item in items {
-            let dateStr = Self.dateString(item.timestamp)
-            grouped[dateStr, default: []].append(item)
+        do {
+            let items = try modelContext.fetch(descriptor)
+            NSLog("LifeClip: found \(items.count) items to export")
+            guard !items.isEmpty else { return }
+
+        // Group by date string for per-day files
+        let grouped = Dictionary(grouping: items) { item in
+            Self.dateString(from: item.timestamp)
         }
 
-        // Write to JSONL files
+        // Ensure directory exists
+        try? FileManager.default.createDirectory(at: Self.eventsDirectory, withIntermediateDirectories: true)
+
+        // Track exported hashes to deduplicate within this batch
+        var exportedHashes = Set<String>()
+        var newExportCount = 0
+
         for (dateStr, dayItems) in grouped {
-            let fileURL = Self.lifeclipDir.appendingPathComponent("\(dateStr).jsonl")
-            // Read existing hashes for dedup
-            let existingHashes = Self.readExistingHashes(from: fileURL)
+            let fileURL = Self.eventsDirectory.appendingPathComponent("\(dateStr).jsonl")
+
+            // Load existing hashes from the file to avoid duplicates
+            let existingHashes = Self.loadExistingHashes(from: fileURL)
 
             var lines: [String] = []
             for item in dayItems {
-                guard !existingHashes.contains(item.contentHash) else { continue }
-                let event = Self.toLifeClipEvent(item)
-                if let jsonData = try? JSONSerialization.data(withJSONObject: event),
-                   let jsonString = String(data: jsonData, encoding: .utf8) {
-                    lines.append(jsonString)
+                let hash = item.contentHash
+                if existingHashes.contains(hash) || exportedHashes.contains(hash) {
+                    continue
+                }
+                if let line = Self.toJSONL(item: item) {
+                    lines.append(line)
+                    exportedHashes.insert(hash)
+                    newExportCount += 1
                 }
             }
 
             if !lines.isEmpty {
-                let data = (lines.joined(separator: "\n") + "\n").data(using: .utf8) ?? Data()
-                if FileManager.default.fileExists(atPath: fileURL.path) {
-                    if let handle = try? FileHandle(forWritingTo: fileURL) {
-                        handle.seekToEndOfFile()
-                        handle.write(data)
-                        handle.closeFile()
-                    }
-                } else {
-                    try? data.write(to: fileURL)
-                }
-                NSLog("📋 LifeClip: exported \(lines.count) items to \(dateStr).jsonl")
+                Self.appendLines(lines, to: fileURL)
             }
         }
 
-        lastExportDate = items.last?.timestamp ?? lastExportDate
-        Self.saveLastExportDate(lastExportDate)
+        if newExportCount > 0 {
+            // Update last export date to the latest item's timestamp
+            if let latestTimestamp = items.last?.timestamp {
+                UserDefaults.standard.set(latestTimestamp, forKey: Self.lastExportDateKey)
+            }
+            let total = (UserDefaults.standard.integer(forKey: Self.exportedCountKey)) + newExportCount
+            UserDefaults.standard.set(total, forKey: Self.exportedCountKey)
+            NSLog("✅ LifeClip: exported \(newExportCount) clipboard events (\(total) total)")
+        }
+        } catch {
+            NSLog("❌ LifeClip: fetch failed: \(error)")
+        }
     }
 
-    // MARK: - Helpers
+    // MARK: - JSONL Formatting
 
-    private static func toLifeClipEvent(_ item: ClipboardItem) -> [String: Any] {
-        let typeStr: String
-        switch item.type {
-        case .text: typeStr = "text"
-        case .url: typeStr = "url"
-        case .image: typeStr = "image"
+    private static func toJSONL(item: ClipboardItem) -> String? {
+        // Skip image items (file paths, not useful as text events)
+        guard item.type != .image else { return nil }
+
+        // Skip sensitive items if user opted in
+        if item.isSensitive && UserDefaults.standard.bool(forKey: "exportSkipSensitive") {
+            return nil
         }
 
-        let formatter = ISO8601DateFormatter()
-        formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+        let content = PIIDetector.redact(String(item.decryptedContent.prefix(500)))
+        let type = item.type.rawValue // "text" or "url"
 
-        return [
+        let event: [String: Any] = [
             "id": item.id.uuidString,
             "source": "clipboard",
-            "type": typeStr,
-            "timestamp": formatter.string(from: item.timestamp),
-            "content": String(PIIRedactor.redact(item.content).prefix(500)),
+            "type": type,
+            "timestamp": iso8601String(from: item.timestamp),
+            "content": content,
+            "contentHash": item.contentHash,
             "metadata": [
                 "isPinned": item.isPinned,
                 "copyCount": item.copyCount
-            ],
-            "contentHash": item.contentHash
+            ] as [String: Any],
+            "tags": ["clipboard"]
         ]
+
+        guard let data = try? JSONSerialization.data(withJSONObject: event, options: [.sortedKeys]),
+              let jsonString = String(data: data, encoding: .utf8) else {
+            return nil
+        }
+        return jsonString
     }
 
-    private static func readExistingHashes(from fileURL: URL) -> Set<String> {
-        guard let data = try? String(contentsOf: fileURL, encoding: .utf8) else { return [] }
+    // MARK: - File Operations
+
+    private static func appendLines(_ lines: [String], to fileURL: URL) {
+        let text = lines.joined(separator: "\n") + "\n"
+        guard let data = text.data(using: .utf8) else { return }
+
+        if FileManager.default.fileExists(atPath: fileURL.path) {
+            // Append mode
+            guard let handle = try? FileHandle(forWritingTo: fileURL) else { return }
+            handle.seekToEndOfFile()
+            handle.write(data)
+            handle.closeFile()
+        } else {
+            try? data.write(to: fileURL, options: .atomic)
+        }
+    }
+
+    private static func loadExistingHashes(from fileURL: URL) -> Set<String> {
+        guard let content = try? String(contentsOf: fileURL, encoding: .utf8) else {
+            return []
+        }
         var hashes = Set<String>()
-        for line in data.split(separator: "\n") {
-            if let json = try? JSONSerialization.jsonObject(with: Data(line.utf8)) as? [String: Any],
-               let hash = json["contentHash"] as? String {
-                hashes.insert(hash)
-            }
+        for line in content.split(separator: "\n") where !line.isEmpty {
+            guard let data = line.data(using: .utf8),
+                  let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+                  let hash = json["contentHash"] as? String else { continue }
+            hashes.insert(hash)
         }
         return hashes
     }
 
-    private static func dateString(_ date: Date) -> String {
+    // MARK: - Helpers
+
+    private static func dateString(from date: Date) -> String {
         let formatter = DateFormatter()
         formatter.dateFormat = "yyyy-MM-dd"
-        formatter.timeZone = .current
+        formatter.timeZone = TimeZone.current
         return formatter.string(from: date)
     }
 
-    // MARK: - Persistence
-
-    private static let lastExportKey = "LifeClipLastExportDate"
-
-    private static func loadLastExportDate() -> Date {
-        UserDefaults.standard.object(forKey: lastExportKey) as? Date ?? Date.distantPast
+    private static func iso8601String(from date: Date) -> String {
+        let formatter = ISO8601DateFormatter()
+        formatter.formatOptions = [.withInternetDateTime]
+        return formatter.string(from: date)
     }
 
-    private static func saveLastExportDate(_ date: Date) {
-        UserDefaults.standard.set(date, forKey: lastExportKey)
+    // MARK: - Status Info
+
+    var lastExportDate: Date? {
+        UserDefaults.standard.object(forKey: Self.lastExportDateKey) as? Date
+    }
+
+    var exportedCount: Int {
+        UserDefaults.standard.integer(forKey: Self.exportedCountKey)
     }
 }

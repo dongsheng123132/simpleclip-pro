@@ -4,9 +4,13 @@ struct SettingsView: View {
     @AppStorage("autoPaste") private var autoPaste = true
     @AppStorage("dailyDigestEnabled") private var dailyDigestEnabled = true
     @AppStorage("dailyDigestHour") private var dailyDigestHour = 22
-    @AppStorage("lifeClipExportEnabled") private var lifeClipExportEnabled = false
+    @AppStorage(LifeClipExporter.enabledKey) private var lifeClipExportEnabled = false
+    @AppStorage("sensitiveAutoCleanup") private var sensitiveAutoCleanup = true
+    @AppStorage("exportSkipSensitive") private var exportSkipSensitive = false
     @ObservedObject var monitor: ClipboardMonitor
+    var lifeClipExporter: LifeClipExporter?
     @Environment(\.dismiss) private var dismiss
+    @State private var cleanedCount: Int?
 
     var body: some View {
         VStack(spacing: 20) {
@@ -34,7 +38,47 @@ struct SettingsView: View {
 
                 Section(header: Text("LifeClip")) {
                     Toggle(NSLocalizedString("导出到 LifeClip", comment: ""), isOn: $lifeClipExportEnabled)
-                        .help(NSLocalizedString("将剪贴板事件导出到 ~/.lifeclip/events/ 供 LifeClip CLI 分析", comment: ""))
+                        .help(NSLocalizedString("定时将剪贴板事件导出为 JSONL，供 LifeClip 分析", comment: ""))
+                        .onChange(of: lifeClipExportEnabled) { _, newValue in
+                            if newValue {
+                                lifeClipExporter?.start()
+                            } else {
+                                lifeClipExporter?.stop()
+                            }
+                        }
+                    if lifeClipExportEnabled {
+                        if let lastDate = lifeClipExporter?.lastExportDate {
+                            HStack {
+                                Text(NSLocalizedString("上次导出", comment: ""))
+                                Spacer()
+                                Text(lastDate, style: .relative)
+                                    .foregroundColor(.secondary)
+                            }
+                        }
+                        HStack {
+                            Text(NSLocalizedString("已导出条数", comment: ""))
+                            Spacer()
+                            Text("\(lifeClipExporter?.exportedCount ?? 0)")
+                                .foregroundColor(.secondary)
+                        }
+                    }
+                }
+
+                Section(header: Text(NSLocalizedString("隐私", comment: ""))) {
+                    Toggle(NSLocalizedString("敏感信息自动清理", comment: ""), isOn: $sensitiveAutoCleanup)
+                        .help(NSLocalizedString("自动删除 24 小时前的敏感剪贴（已固定的除外）", comment: ""))
+                    Toggle(NSLocalizedString("导出时跳过敏感项", comment: ""), isOn: $exportSkipSensitive)
+                        .help(NSLocalizedString("LifeClip 导出时完全跳过含敏感信息的条目", comment: ""))
+                    Button(action: {
+                        cleanedCount = monitor.cleanSensitiveItemsNow()
+                    }) {
+                        Text(NSLocalizedString("立即清理敏感信息", comment: ""))
+                    }
+                    if let count = cleanedCount {
+                        Text("已清理 \(count) 条敏感记录")
+                            .foregroundColor(.secondary)
+                            .font(.caption)
+                    }
                 }
 
                 Section {
@@ -70,7 +114,7 @@ struct SettingsView: View {
             .keyboardShortcut(.defaultAction)
         }
         .padding()
-        .frame(width: 300, height: 360)
+        .frame(width: 300, height: 520)
     }
 
     private func timeLabel(hour: Int) -> String {

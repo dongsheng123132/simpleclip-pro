@@ -3,6 +3,7 @@ import SwiftData
 
 struct PopoverView: View {
     @ObservedObject var monitor: ClipboardMonitor
+    var lifeClipExporter: LifeClipExporter?
     @Query(sort: \ClipboardItem.timestamp, order: .reverse) private var allItems: [ClipboardItem]
     @State private var searchText = ""
     @State private var showSettings = false
@@ -10,7 +11,7 @@ struct PopoverView: View {
     @State private var showDigest = false
     @State private var selectedItemId: UUID? = nil
     @AppStorage("autoPaste") private var autoPaste = true
-    
+
     var onOpenManager: ((String?) -> Void)?
     
 
@@ -23,7 +24,7 @@ struct PopoverView: View {
             }
         }
         return limitedItems.filter {
-            $0.content.localizedCaseInsensitiveContains(searchText)
+            $0.decryptedContent.localizedCaseInsensitiveContains(searchText)
         }.sorted { item1, item2 in
             if item1.isPinned != item2.isPinned { return item1.isPinned }
             return item1.timestamp > item2.timestamp
@@ -170,7 +171,7 @@ struct PopoverView: View {
             .background(
                 Color.clear
                     .popover(isPresented: $showSettings) {
-                        SettingsView(monitor: monitor)
+                        SettingsView(monitor: monitor, lifeClipExporter: lifeClipExporter)
                     }
             )
         }

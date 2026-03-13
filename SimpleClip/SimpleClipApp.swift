@@ -47,6 +47,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             let storeURL = Self.appSupportURL.appendingPathComponent("SimpleClip.store")
             let config = ModelConfiguration(url: storeURL)
             container = try ModelContainer(for: ClipboardItem.self, DailyDigest.self, configurations: config)
+            Self.lockDownStoreFiles(storeURL)
         } catch {
             NSLog("❌ 数据库初始化失败: \(error)")
             showDatabaseErrorAlert(error: error)
@@ -104,15 +105,11 @@ class AppDelegate: NSObject, NSApplicationDelegate {
                 self.scheduleDailyDigestTimer()
 
                 // Toggle LifeClip export based on setting
-                let exportEnabled = UserDefaults.standard.bool(forKey: "lifeClipExportEnabled")
-                if exportEnabled && self.lifeClipExporter == nil {
-                    if let context = self.container?.mainContext {
-                        self.lifeClipExporter = LifeClipExporter(modelContext: context)
-                        self.lifeClipExporter?.startExporting()
-                    }
-                } else if !exportEnabled && self.lifeClipExporter != nil {
-                    self.lifeClipExporter?.stopExporting()
-                    self.lifeClipExporter = nil
+                let exportEnabled = UserDefaults.standard.bool(forKey: LifeClipExporter.enabledKey)
+                if exportEnabled {
+                    self.lifeClipExporter?.start()
+                } else {
+                    self.lifeClipExporter?.stop()
                 }
             }
         }
@@ -167,12 +164,8 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         monitor = ClipboardMonitor(modelContext: context)
         monitor?.startMonitoring()
         summaryService = DailySummaryService(modelContext: context)
-
-        // LifeClip Export (optional, controlled by user preference)
-        if UserDefaults.standard.bool(forKey: "lifeClipExportEnabled") {
-            lifeClipExporter = LifeClipExporter(modelContext: context)
-            lifeClipExporter?.startExporting()
-        }
+        lifeClipExporter = LifeClipExporter(modelContext: context)
+        lifeClipExporter?.startIfEnabled()
     }
     
     private func setupPopoverContent() {
@@ -180,6 +173,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         
         let rootView = PopoverView(
             monitor: monitor,
+            lifeClipExporter: lifeClipExporter,
             onOpenManager: { [weak self] category in
                 self?.openManagerWindow(initialCategory: category)
             }
@@ -305,6 +299,17 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         NSApplication.shared.terminate(nil)
     }
 
+    // MARK: - File Permissions
+
+    /// Set store files to 600 (owner-only read/write) to prevent other users from reading via sqlite3.
+    private static func lockDownStoreFiles(_ storeURL: URL) {
+        let fm = FileManager.default
+        let paths = [storeURL.path, storeURL.path + "-shm", storeURL.path + "-wal"]
+        for path in paths where fm.fileExists(atPath: path) {
+            try? fm.setAttributes([.posixPermissions: 0o600], ofItemAtPath: path)
+        }
+    }
+
     // MARK: - Data Migration
 
     /// 从旧沙盒容器迁移数据（一次性，迁移完打标记不再执行）
@@ -368,7 +373,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
 
     func applicationWillTerminate(_ notification: Notification) {
         monitor?.stopMonitoring()
-        lifeClipExporter?.stopExporting()
+        lifeClipExporter?.stop()
         dailyDigestTimer?.invalidate()
         dailyDigestTimer = nil
     }

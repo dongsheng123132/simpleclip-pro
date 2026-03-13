@@ -39,7 +39,7 @@ struct DetailPreviewView: View {
     private var contentView: some View {
         switch item.type {
         case .text, .url:
-            Text(item.content)
+            Text(item.decryptedContent)
                 .font(.body)
                 .textSelection(.enabled)
                 .multilineTextAlignment(.leading)

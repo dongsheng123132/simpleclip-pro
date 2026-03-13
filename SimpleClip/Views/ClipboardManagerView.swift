@@ -48,7 +48,7 @@ struct ClipboardManagerView: View {
             byCategory = items
         }
         if searchText.isEmpty { return byCategory }
-        return byCategory.filter { $0.content.localizedStandardContains(searchText) }
+        return byCategory.filter { $0.decryptedContent.localizedStandardContains(searchText) }
     }
 
     var selectedItem: ClipboardItem? {
@@ -353,19 +353,19 @@ struct SimpleDetailView: View {
             }
 
         case .url:
-            if let url = URL(string: item.content) {
-                Link(item.content, destination: url)
+            if let url = URL(string: item.decryptedContent) {
+                Link(item.decryptedContent, destination: url)
                     .font(.body)
                     .foregroundColor(.blue)
                     .textSelection(.enabled)
             } else {
-                Text(item.content)
+                Text(item.decryptedContent)
                     .font(.body)
                     .textSelection(.enabled)
             }
 
         case .text:
-            Text(item.content)
+            Text(item.decryptedContent)
                 .font(.body)
                 .textSelection(.enabled)
         }
@@ -381,7 +381,7 @@ struct SimpleDetailView: View {
         p.clearContents()
         switch item.type {
         case .text, .url:
-            p.setString(item.content, forType: .string)
+            p.setString(item.decryptedContent, forType: .string)
         case .image:
             if let image = loadImage(at: item.content) {
                 p.writeObjects([image])

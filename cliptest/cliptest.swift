@@ -1,41 +1,103 @@
-//
-//  cliptest.swift
-//  cliptest
-//
-//  Created by dosen8618607105700 on 2026/1/28.
-//
-
 import XCTest
+import SwiftData
+@testable import SimpleClip
 
-final class cliptest: XCTestCase {
+@MainActor
+final class ClipboardItemTests: XCTestCase {
+    var container: ModelContainer!
+    var context: ModelContext!
 
     override func setUpWithError() throws {
-        // Put setup code here. This method is called before the invocation of each test method in the class.
-
-        // In UI tests it is usually best to stop immediately when a failure occurs.
-        continueAfterFailure = false
-
-        // In UI tests it’s important to set the initial state - such as interface orientation - required for your tests before they run. The setUp method is a good place to do this.
+        let config = ModelConfiguration(isStoredInMemoryOnly: true)
+        container = try ModelContainer(for: ClipboardItem.self, DailyDigest.self, configurations: config)
+        context = container.mainContext
     }
 
     override func tearDownWithError() throws {
-        // Put teardown code here. This method is called after the invocation of each test method in the class.
+        context = nil
+        container = nil
     }
 
-    @MainActor
-    func testExample() throws {
-        // UI tests must launch the application that they test.
-        let app = XCUIApplication()
-        app.launch()
+    func testSensitiveItemMarking() throws {
+        let item = ClipboardItem(content: "联系 test@example.com", type: .text)
+        item.isSensitive = true
+        context.insert(item)
+        try context.save()
 
-        // Use XCTAssert and related functions to verify your tests produce the correct results.
+        let descriptor = FetchDescriptor<ClipboardItem>()
+        let items = try context.fetch(descriptor)
+
+        XCTAssertEqual(items.count, 1)
+        XCTAssertTrue(items.first!.isSensitive)
     }
 
-    @MainActor
-    func testLaunchPerformance() throws {
-        // This measures how long it takes to launch your application.
-        measure(metrics: [XCTApplicationLaunchMetric()]) {
-            XCUIApplication().launch()
+    func testCleanSensitiveItemsNow() throws {
+        let monitor = ClipboardMonitor(modelContext: context)
+
+        // Insert sensitive item (unpinned)
+        let sensitive = ClipboardItem(content: "密码 password=abc", type: .text)
+        sensitive.isSensitive = true
+        context.insert(sensitive)
+
+        // Insert normal item
+        let normal = ClipboardItem(content: "Hello World", type: .text)
+        context.insert(normal)
+        try context.save()
+
+        let deleted = monitor.cleanSensitiveItemsNow()
+        XCTAssertEqual(deleted, 1)
+
+        let remaining = try context.fetch(FetchDescriptor<ClipboardItem>())
+        XCTAssertEqual(remaining.count, 1)
+        XCTAssertEqual(remaining.first?.content, "Hello World")
+    }
+
+    func testPinnedSensitiveItemNotCleaned() throws {
+        let monitor = ClipboardMonitor(modelContext: context)
+
+        // Insert pinned sensitive item
+        let pinned = ClipboardItem(content: "sk-abcdefghijklmnopqrstuvwxyz", type: .text)
+        pinned.isSensitive = true
+        pinned.isPinned = true
+        context.insert(pinned)
+        try context.save()
+
+        let deleted = monitor.cleanSensitiveItemsNow()
+        XCTAssertEqual(deleted, 0)
+
+        let remaining = try context.fetch(FetchDescriptor<ClipboardItem>())
+        XCTAssertEqual(remaining.count, 1)
+    }
+
+    func testEncryptedContentStorage() throws {
+        let item = ClipboardItem(content: "test@example.com 密码", type: .text)
+        item.isSensitive = true
+        // Simulate encryption as done by ClipboardMonitor
+        if let encrypted = PIIDetector.encrypt(item.content) {
+            item.encryptedContent = encrypted
+            item.content = "[encrypted]"
         }
+        context.insert(item)
+        try context.save()
+
+        let descriptor = FetchDescriptor<ClipboardItem>()
+        let items = try context.fetch(descriptor)
+        let fetched = items.first!
+
+        XCTAssertEqual(fetched.content, "[encrypted]")
+        XCTAssertNotNil(fetched.encryptedContent)
+        XCTAssertEqual(fetched.decryptedContent, "test@example.com 密码")
+    }
+
+    func testDecryptedContentFallsBackToContent() throws {
+        let item = ClipboardItem(content: "plain text", type: .text)
+        context.insert(item)
+        try context.save()
+
+        let descriptor = FetchDescriptor<ClipboardItem>()
+        let fetched = try context.fetch(descriptor).first!
+
+        // No encryptedContent → decryptedContent returns content as-is
+        XCTAssertEqual(fetched.decryptedContent, "plain text")
     }
 }

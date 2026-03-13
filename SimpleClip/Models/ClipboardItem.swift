@@ -21,6 +21,8 @@ final class ClipboardItem: Identifiable {
     var contentHash: String
     var imageContentHash: String?  // 仅图片类型使用：存储图片内容的hash（而非文件路径）
     var copyCount: Int = 1
+    var isSensitive: Bool = false
+    var encryptedContent: Data?
 
     init(content: String, type: ClipboardType, imageContentHash: String? = nil) {
         self.id = UUID()
@@ -33,11 +35,20 @@ final class ClipboardItem: Identifiable {
         self.copyCount = 1
     }
 
+    /// Returns the actual content, decrypting if necessary.
+    /// For encrypted sensitive items, `content` is "[encrypted]" and the real data is in `encryptedContent`.
+    var decryptedContent: String {
+        if let data = encryptedContent, let decrypted = PIIDetector.decrypt(data) {
+            return decrypted
+        }
+        return content
+    }
+
     // 显示用的预览文本（不持久化）
     var preview: String {
         switch type {
         case .text, .url:
-            return String(content.prefix(300))
+            return String(decryptedContent.prefix(300))
         case .image:
             return "🖼️ 图片"
         }
@@ -62,9 +73,9 @@ final class ClipboardItem: Identifiable {
         case .image:
             return QuickLookItem(url: URL(fileURLWithPath: content), title: "图片预览")
         case .url:
-            return QuickLookItem(text: content, title: "链接")
+            return QuickLookItem(text: decryptedContent, title: "链接")
         case .text:
-            return QuickLookItem(text: content, title: "文本")
+            return QuickLookItem(text: decryptedContent, title: "文本")
         }
     }
 }

@@ -124,7 +124,7 @@
 			);
 			productName = cliptest;
 			productReference = DE1F75E22F29FB04004E54F2 /* cliptest.xctest */;
-			productType = "com.apple.product-type.bundle.ui-testing";
+			productType = "com.apple.product-type.bundle.unit-test";
 		};
 /* End PBXNativeTarget section */
 
@@ -409,36 +409,42 @@
 		DE1F75EB2F29FB04004E54F2 /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 8;
 				GENERATE_INFOPLIST_FILE = YES;
 				MARKETING_VERSION = 1.4.5;
-				PRODUCT_BUNDLE_IDENTIFIER = "-431.cliptest";
+				DEVELOPMENT_TEAM = 47367AD37J;
+				PRODUCT_BUNDLE_IDENTIFIER = "com.hequbing.SimpleClip.cliptest";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				STRING_CATALOG_GENERATE_SYMBOLS = NO;
 				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
 				SWIFT_EMIT_LOC_STRINGS = NO;
 				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
 				SWIFT_VERSION = 5.0;
-				TEST_TARGET_NAME = SimpleClip;
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/SimpleClip.app/Contents/MacOS/SimpleClip";
 			};
 			name = Debug;
 		};
 		DE1F75EC2F29FB04004E54F2 /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 8;
 				GENERATE_INFOPLIST_FILE = YES;
 				MARKETING_VERSION = 1.4.5;
-				PRODUCT_BUNDLE_IDENTIFIER = "-431.cliptest";
+				DEVELOPMENT_TEAM = 47367AD37J;
+				PRODUCT_BUNDLE_IDENTIFIER = "com.hequbing.SimpleClip.cliptest";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				STRING_CATALOG_GENERATE_SYMBOLS = NO;
 				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
 				SWIFT_EMIT_LOC_STRINGS = NO;
 				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
 				SWIFT_VERSION = 5.0;
-				TEST_TARGET_NAME = SimpleClip;
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/SimpleClip.app/Contents/MacOS/SimpleClip";
 			};
 			name = Release;
 		};

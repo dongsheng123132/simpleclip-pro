@@ -8,6 +8,7 @@ import CryptoKit
 @MainActor
 final class ClipboardMonitor: NSObject, ObservableObject {
     private var timer: Timer?
+    private var sensitiveCleanupTimer: Timer?
     private var lastChangeCount: Int
     private var lastActiveApp: NSRunningApplication?
     private let modelContext: ModelContext
@@ -39,11 +40,21 @@ final class ClipboardMonitor: NSObject, ObservableObject {
             }
         }
         timer?.tolerance = 0.5
+
+        // Sensitive item cleanup: run once at start, then every hour
+        cleanupSensitiveItems()
+        sensitiveCleanupTimer = Timer.scheduledTimer(withTimeInterval: 3600, repeats: true) { [weak self] _ in
+            DispatchQueue.main.async { [weak self] in
+                self?.cleanupSensitiveItems()
+            }
+        }
     }
 
     func stopMonitoring() {
         timer?.invalidate()
         timer = nil
+        sensitiveCleanupTimer?.invalidate()
+        sensitiveCleanupTimer = nil
     }
 
     private func checkClipboard() {
@@ -83,7 +94,15 @@ final class ClipboardMonitor: NSObject, ObservableObject {
             guard !trimmed.isEmpty else { return }
             
             let type: ClipboardType = isValidURL(trimmed) ? .url : .text
-            addItem(ClipboardItem(content: trimmed, type: type))
+            let item = ClipboardItem(content: trimmed, type: type)
+            if PIIDetector.containsSensitiveContent(trimmed) {
+                item.isSensitive = true
+                if let encrypted = PIIDetector.encrypt(trimmed) {
+                    item.encryptedContent = encrypted
+                    item.content = "[encrypted]"
+                }
+            }
+            addItem(item)
         }
         // 处理图片
         else if let image = pasteboard.data(forType: .tiff) {
@@ -154,12 +173,54 @@ final class ClipboardMonitor: NSObject, ObservableObject {
         }
     }
 
+    /// Auto-cleanup: delete sensitive items older than 24h that are not pinned.
+    /// Respects the "sensitiveAutoCleanup" UserDefaults toggle (default: true).
+    func cleanupSensitiveItems() {
+        guard UserDefaults.standard.object(forKey: "sensitiveAutoCleanup") == nil
+                || UserDefaults.standard.bool(forKey: "sensitiveAutoCleanup") else { return }
+
+        let cutoff = Date().addingTimeInterval(-24 * 3600)
+        let predicate = #Predicate<ClipboardItem> { item in
+            item.isSensitive == true && item.isPinned == false && item.timestamp < cutoff
+        }
+        do {
+            let descriptor = FetchDescriptor<ClipboardItem>(predicate: predicate)
+            let items = try modelContext.fetch(descriptor)
+            guard !items.isEmpty else { return }
+            for item in items { modelContext.delete(item) }
+            try modelContext.save()
+            NSLog("🧹 自动清理 \(items.count) 条过期敏感项")
+        } catch {
+            NSLog("❌ 清理敏感项失败: \(error.localizedDescription)")
+        }
+    }
+
+    /// Immediately delete all unpinned sensitive items. Returns count of deleted items.
+    @discardableResult
+    func cleanSensitiveItemsNow() -> Int {
+        let predicate = #Predicate<ClipboardItem> { item in
+            item.isSensitive == true && item.isPinned == false
+        }
+        do {
+            let descriptor = FetchDescriptor<ClipboardItem>(predicate: predicate)
+            let items = try modelContext.fetch(descriptor)
+            guard !items.isEmpty else { return 0 }
+            for item in items { modelContext.delete(item) }
+            try modelContext.save()
+            NSLog("🧹 手动清理 \(items.count) 条敏感项")
+            return items.count
+        } catch {
+            NSLog("❌ 清理敏感项失败: \(error.localizedDescription)")
+            return 0
+        }
+    }
+
     func copyToClipboard(_ item: ClipboardItem) {
         let pasteboard = NSPasteboard.general
         pasteboard.clearContents()
         switch item.type {
         case .text, .url:
-            pasteboard.setString(item.content, forType: .string)
+            pasteboard.setString(item.decryptedContent, forType: .string)
         case .image:
             if FileManager.default.fileExists(atPath: item.content) {
                 if let image = NSImage(contentsOfFile: item.content) {
