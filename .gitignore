@@ -11,8 +11,8 @@ xcuserdata/
 *.xcscmblueprint
 
 # Swift Package Manager
-/.build
-/.swiftpm
+.build/
+.swiftpm/
 
 # Logs
 *.log
