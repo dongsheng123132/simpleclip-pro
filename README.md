@@ -97,8 +97,8 @@ Feed this to Claude, GPT, or any AI assistant to give it instant personal contex
 
 ```bash
 # Clone & install
-git clone https://github.com/dongsheng123132/simpleclip-pro.git
-cd simpleclip-pro
+git clone https://github.com/dongsheng123132/lifeclip.git
+cd lifeclip
 npm install && npm run build
 
 # Collect data from all sources
@@ -291,8 +291,8 @@ LifeClip 是一个开源的**个人上下文系统** —— 自动记录你的�
 
 ```bash
 # 克隆 & 安装
-git clone https://github.com/dongsheng123132/simpleclip-pro.git
-cd simpleclip-pro
+git clone https://github.com/dongsheng123132/lifeclip.git
+cd lifeclip
 npm install && npm run build
 
 # 采集数据

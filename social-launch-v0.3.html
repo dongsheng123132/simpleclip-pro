@@ -1,0 +1,316 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>LifeClip v0.3 - Social Media Launch Copy</title>
+<style>
+body { font-family: -apple-system, BlinkMacSystemFont, sans-serif; max-width: 700px; margin: 40px auto; padding: 0 20px; background: #f5f5f5; color: #333; }
+h1 { text-align: center; margin-bottom: 8px; }
+.subtitle { text-align: center; color: #666; margin-bottom: 40px; }
+.card { background: #fff; border-radius: 12px; padding: 24px; margin-bottom: 24px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
+.card h2 { margin-top: 0; display: flex; align-items: center; gap: 8px; }
+.tag { font-size: 12px; padding: 2px 10px; border-radius: 12px; color: #fff; font-weight: 600; }
+.tag-twitter { background: #1da1f2; }
+.tag-jike { background: #ffe411; color: #333; }
+.tag-xhs { background: #fe2c55; }
+.tag-wechat { background: #07c160; }
+.tag-video { background: #fa5151; }
+.tag-linkedin { background: #0a66c2; }
+.tag-reddit { background: #ff4500; }
+.tag-hn { background: #ff6600; }
+.tag-ph { background: #da552f; }
+.tag-v2ex { background: #333; }
+.tag-juejin { background: #1e80ff; }
+.tag-devto { background: #0a0a0a; }
+.copy-area { background: #fafafa; border: 1px solid #e0e0e0; border-radius: 8px; padding: 16px; white-space: pre-wrap; font-size: 15px; line-height: 1.6; user-select: all; }
+.char-count { font-size: 12px; color: #999; margin-top: 4px; }
+button { background: #000; color: #fff; border: none; border-radius: 8px; padding: 10px 20px; font-size: 14px; cursor: pointer; margin-top: 12px; transition: background 0.2s; }
+button:hover { background: #333; }
+a.pub { display: inline-block; background: transparent; border: 1px solid #666; color: #666; border-radius: 8px; padding: 10px 20px; font-size: 14px; text-decoration: none; margin-top: 12px; margin-left: 8px; transition: background 0.2s; }
+a.pub:hover { background: #f0f0f0; }
+.toast { position: fixed; top: 20px; left: 50%; transform: translateX(-50%); background: #333; color: #fff; padding: 10px 24px; border-radius: 8px; display: none; z-index: 99; font-size: 14px; }
+.note { font-size: 13px; color: #888; margin-top: 8px; font-style: italic; }
+</style>
+</head>
+<body>
+<h1>LifeClip v0.3 Launch Copy</h1>
+<p class="subtitle">Personal Context System for the AI Era &mdash; 12 Platforms</p>
+<div id="toast" class="toast">Copied!</div>
+
+<!-- Twitter/X -->
+<div class="card">
+<h2><span class="tag tag-twitter">Twitter/X</span> Tweet</h2>
+<div class="copy-area" id="twitter">Your AI assistant forgets you every conversation.
+I built LifeClip to fix that — it captures clipboard, browser, notes & AI chats, then generates context.json any AI can read.
+100% local. Zero cloud.
+v0.3: TF-IDF → AI insight pipeline
+https://github.com/dongsheng123132/lifeclip
+#opensource #AI</div>
+<div class="char-count"></div>
+<button onclick="copyText('twitter')">Copy</button>
+<a class="pub" href="https://twitter.com/intent/tweet" target="_blank">Go Publish</a>
+</div>
+
+<!-- Jike -->
+<div class="card">
+<h2><span class="tag tag-jike">Jike</span> 即刻</h2>
+<div class="copy-area" id="jike">LifeClip v0.3 发布 — 不是剪贴板管理器，是 AI 时代的个人上下文系统。
+
+核心思路：AI 不了解你，LifeClip 让它了解。
+
+• 自动采集：剪贴板、浏览器历史、Obsidian 笔记、Claude Code 对话
+• 两阶段洞察管线：TF-IDF 粗加工 → AI 精加工（支持纯本地/Apple Intelligence/Claude API 三种 provider）
+• 输出 ~/.lifeclip/context.json，喂给任何 AI 助手秒懂你
+• 100% 本地处理，零网络请求
+
+安装：
+git clone https://github.com/dongsheng123132/lifeclip.git
+cd simpleclip-pro && npm install && npm run build
+npx lifeclip collect && npx lifeclip insights
+
+TypeScript monorepo + Swift macOS app，GPL-3.0 开源。
+
+适合：AI builder、独立开发者、隐私敏感用户</div>
+<button onclick="copyText('jike')">Copy</button>
+<a class="pub" href="https://web.okjike.com/" target="_blank">Go Publish</a>
+</div>
+
+<!-- Xiaohongshu -->
+<div class="card">
+<h2><span class="tag tag-xhs">Xiaohongshu</span> 小红书</h2>
+<div class="copy-area" id="xhs">每次跟 AI 聊天都要重新介绍自己？我受不了了，做了个工具解决它。
+
+📊 问题：每个 AI 助手都从零开始，不知道你在忙什么
+🔧 方案：LifeClip — 自动记录你的数字行为，生成 AI 可读的个人上下文
+
+✅ 自动采集剪贴板、浏览器、笔记、AI 对话
+✅ TF-IDF 提取主题 → AI 生成洞察报告
+✅ 三种 AI 引擎：纯本地 / Apple Intelligence / Claude API
+✅ 输出 context.json 给任何 AI 助手使用
+✅ 100% 本地，零网络请求，数据全在你手里
+
+💡 之前 vs 之后：
+之前：「我是做 AI 产品的，最近在研究...（每次重复 50 字介绍）」
+之后：AI 自动读取 context.json，秒懂你最近在忙什么
+
+🔗 GitHub 开源：github.com/dongsheng123132/lifeclip
+
+#AI工具 #开源项目 #隐私优先 #开发者工具 #个人效率 #LifeClip</div>
+<button onclick="copyText('xhs')">Copy</button>
+<a class="pub" href="https://creator.xiaohongshu.com/publish/publish" target="_blank">Go Publish</a>
+</div>
+
+<!-- WeChat Moments -->
+<div class="card">
+<h2><span class="tag tag-wechat">WeChat</span> 朋友圈</h2>
+<div class="copy-area" id="wechat">做了个有意思的东西 —— LifeClip，给 AI 用的「个人上下文系统」。
+
+起因很简单：每次跟 Claude/GPT 聊天都要重新介绍自己在干嘛，烦了。
+
+LifeClip 自动记录你的剪贴板、浏览器历史、笔记和 AI 对话，提取主题，生成一份 context.json。任何 AI 工具都能读这个文件，秒懂你最近在忙什么。
+
+v0.3 加了两阶段洞察管线：先用 TF-IDF 做粗加工，再用 AI（本地/Apple Intelligence/Claude API 三选一）做精加工。全程本地处理，不走云端。
+
+开源的，感兴趣可以看看：
+github.com/dongsheng123132/lifeclip</div>
+<button onclick="copyText('wechat')">Copy</button>
+<span style="display:inline-block;margin-left:8px;margin-top:12px;color:#999;font-size:13px;">Open WeChat to publish</span>
+</div>
+
+<!-- Video Account -->
+<div class="card">
+<h2><span class="tag tag-video">Video Account</span> 视频号</h2>
+<div class="copy-area" id="video-title">LifeClip: 3步让AI记住你是谁</div>
+<div class="note">Title (above) / Description (below)</div>
+<div class="copy-area" id="video-desc" style="margin-top: 8px;">让 AI 从零认识你到秒懂你，只需要3步：
+
+1. 安装 LifeClip（开源免费）
+2. 运行 lifeclip collect 采集数据
+3. 生成 context.json 喂给任何 AI
+
+核心原理：
+自动采集剪贴板+浏览器+笔记+AI对话
+TF-IDF 提取主题 → AI 生成洞察
+100% 本地处理，不走云端
+
+GitHub: github.com/dongsheng123132/lifeclip
+
+#AI #开发者工具 #开源 #隐私 #LifeClip</div>
+<button onclick="copyText('video-title')">Copy Title</button>
+<button onclick="copyText('video-desc')">Copy Description</button>
+<a class="pub" href="https://channels.weixin.qq.com/platform/post/create" target="_blank">Go Publish</a>
+</div>
+
+<!-- LinkedIn -->
+<div class="card">
+<h2><span class="tag tag-linkedin">LinkedIn</span></h2>
+<div class="copy-area" id="linkedin">Every AI conversation starts from zero. Your assistant doesn't know what you've been working on, what you care about, or what your day looks like.
+
+I built LifeClip to solve this — an open-source Personal Context System that auto-captures your digital behavior (clipboard, browser history, notes, AI chats) and generates AI-readable personal context.
+
+What makes v0.3 interesting:
+
+A two-stage insight pipeline: TF-IDF extraction produces structured JSON, then a pluggable AI provider (local TF-IDF, Apple Intelligence, or Claude API) generates human-readable insights.
+
+The key output is ~/.lifeclip/context.json — a file any AI tool can read to instantly understand your context. Think of it as .gitconfig for your identity, but for AI.
+
+100% local processing. Zero network requests (unless you opt into the Claude API provider). Your data stays on your machine.
+
+Built with TypeScript (monorepo with npm workspaces) + Swift (macOS clipboard app). GPL-3.0 licensed.
+
+GitHub: https://github.com/dongsheng123132/lifeclip
+
+#AI #OpenSource #Privacy #DeveloperTools #PersonalProductivity</div>
+<button onclick="copyText('linkedin')">Copy</button>
+<a class="pub" href="https://www.linkedin.com/feed/?shareActive=true" target="_blank">Go Publish</a>
+</div>
+
+<!-- Reddit -->
+<div class="card">
+<h2><span class="tag tag-reddit">Reddit</span></h2>
+<div class="copy-area" id="reddit-title">I built LifeClip — an open-source tool that generates personal context for AI assistants (100% local)</div>
+<div class="note">Title (above) / Body (below) — subs: r/ClaudeAI, r/LocalLLaMA, r/programming, r/commandline</div>
+<div class="copy-area" id="reddit-body" style="margin-top: 8px;">I got tired of re-introducing myself every time I start a conversation with Claude or GPT. So I built LifeClip — it captures clipboard, browser history, Obsidian notes, and Claude Code sessions, then generates a `context.json` file that any AI can read.
+
+**How it works:**
+
+1. `lifeclip collect` — pulls data from all sources into JSONL files
+2. TF-IDF extracts topics and patterns (pure TypeScript, no LLM needed)
+3. A pluggable AI provider generates human-readable insights (three options: local TF-IDF, Apple Intelligence via Swift helper, or Claude API)
+4. `lifeclip context` outputs `~/.lifeclip/context.json` — feed this to any AI assistant
+
+Everything runs locally by default. The Claude API provider is opt-in. PII filter auto-redacts emails, phone numbers, credit cards, and API keys before processing.
+
+It's a TypeScript monorepo (npm workspaces) with a Swift macOS clipboard app. GPL-3.0.
+
+Limitations: macOS only for the clipboard logger (the CLI works anywhere with Node 18+). Browser history extraction currently supports Chrome and Safari. The TF-IDF provider works well for topic extraction but obviously can't match LLM-quality narratives.
+
+GitHub: https://github.com/dongsheng123132/lifeclip
+
+Happy to answer questions or hear feedback.</div>
+<button onclick="copyText('reddit-title')">Copy Title</button>
+<button onclick="copyText('reddit-body')">Copy Body</button>
+<a class="pub" href="https://www.reddit.com/submit" target="_blank">Go Publish</a>
+</div>
+
+<!-- Hacker News -->
+<div class="card">
+<h2><span class="tag tag-hn">Hacker News</span></h2>
+<div class="copy-area" id="hn-title">Show HN: LifeClip – Auto-generate personal context for AI from clipboard, browser, notes</div>
+<div class="note">Title (above) / First comment (below)</div>
+<div class="copy-area" id="hn-body" style="margin-top: 8px;">LifeClip captures your digital behavior (clipboard, browser history, Obsidian notes, Claude Code sessions) and generates a structured context.json that any AI tool can read.
+
+The interesting technical bit is the two-stage insight pipeline: Stage 1 uses TF-IDF (pure TypeScript, no dependencies) to extract topics and produce a StructuredInsights JSON. Stage 2 feeds that JSON to a pluggable AI provider — local TF-IDF summary, Apple Intelligence via a Swift helper binary, or the Claude API.
+
+Everything is local by default. Events are stored as JSONL (one file per day), with built-in PII redaction. The Claude API provider is explicitly opt-in.
+
+TypeScript monorepo with npm workspaces + Swift macOS app. GPL-3.0.
+
+https://github.com/dongsheng123132/lifeclip</div>
+<button onclick="copyText('hn-title')">Copy Title</button>
+<button onclick="copyText('hn-body')">Copy Comment</button>
+<a class="pub" href="https://news.ycombinator.com/submitlink" target="_blank">Go Publish</a>
+</div>
+
+<!-- Product Hunt -->
+<div class="card">
+<h2><span class="tag tag-ph">Product Hunt</span></h2>
+<div class="copy-area" id="ph-tagline">Personal context for AI — auto-capture your digital life, locally.</div>
+<div class="note">Tagline (above) / Description (below) / Maker comment (bottom)</div>
+<div class="copy-area" id="ph-desc" style="margin-top: 8px;">LifeClip auto-captures your clipboard, browser history, notes, and AI chats, then generates a context.json file that any AI assistant can read to instantly understand who you are and what you're working on. 100% local processing, built-in PII filtering, three AI provider options.</div>
+<div class="copy-area" id="ph-comment" style="margin-top: 8px;">Hey everyone! I built LifeClip because I was frustrated re-introducing myself to every AI tool. The core idea: your clipboard + browser + notes = a rich signal of what you actually work on. LifeClip turns that signal into structured context any AI can consume.
+
+v0.3 adds a two-stage insight pipeline — TF-IDF extracts topics first, then a pluggable AI provider (local, Apple Intelligence, or Claude API) generates the narrative. Privacy is non-negotiable: everything is local by default, with PII auto-redaction.
+
+Next up: visualization dashboard and more data source plugins. Feedback welcome!</div>
+<button onclick="copyText('ph-tagline')">Copy Tagline</button>
+<button onclick="copyText('ph-desc')">Copy Description</button>
+<button onclick="copyText('ph-comment')">Copy Maker Comment</button>
+<a class="pub" href="https://www.producthunt.com/posts/new" target="_blank">Go Publish</a>
+</div>
+
+<!-- V2EX -->
+<div class="card">
+<h2><span class="tag tag-v2ex">V2EX</span></h2>
+<div class="copy-area" id="v2ex-title">LifeClip — 开源的个人上下文系统，让 AI 自动了解你在忙什么</div>
+<div class="note">Title (above) / Body (below) — 发到 /t/programmer 或 /t/share</div>
+<div class="copy-area" id="v2ex-body" style="margin-top: 8px;">做了个开源工具 LifeClip，解决一个具体问题：每次跟 AI 聊天都要重新介绍自己。
+
+原理：
+1. 自动采集剪贴板、Chrome/Safari 历史、Obsidian 笔记变更、Claude Code 会话
+2. TF-IDF 提取主题（纯 TypeScript，零依赖）
+3. 可插拔的 AI provider 生成洞察报告（三选一：纯本地 TF-IDF / Apple Intelligence / Claude API）
+4. 输出 ~/.lifeclip/context.json，任何 AI 工具都能读
+
+技术栈：
+- TypeScript monorepo（npm workspaces）
+- Swift + SwiftData（macOS 剪贴板监控）
+- JSONL 存储（每天一个文件，人类可读）
+- 内置 PII 过滤（邮箱、手机号、信用卡、API Key 自动脱敏）
+
+100% 本地处理，不走云端（除非你主动选 Claude API provider）。
+
+GitHub: https://github.com/dongsheng123132/lifeclip
+
+GPL-3.0 开源，欢迎反馈。</div>
+<button onclick="copyText('v2ex-title')">Copy Title</button>
+<button onclick="copyText('v2ex-body')">Copy Body</button>
+<a class="pub" href="https://www.v2ex.com/new" target="_blank">Go Publish</a>
+</div>
+
+<!-- Juejin -->
+<div class="card">
+<h2><span class="tag tag-juejin">Juejin</span> 掘金</h2>
+<div class="copy-area" id="juejin-title">用 TF-IDF + 可插拔 AI 实现个人行为洞察系统 | LifeClip v0.3</div>
+<div class="note">Title (above) / Summary (below)</div>
+<div class="copy-area" id="juejin-summary" style="margin-top: 8px;">每个 AI 工具都不知道你是谁。LifeClip 自动采集剪贴板、浏览器、笔记和 AI 对话，用两阶段管线（TF-IDF 提取 → AI 总结）生成个人上下文，100% 本地处理。本文介绍 v0.3 的架构设计：TypeScript monorepo、StructuredInsights JSON 格式、三种 AI provider 的插拔机制，以及 67 个自动化测试的实现。</div>
+<div class="note">Tags: Claude Code, 开发工具, 效率提升, TF-IDF, 开源</div>
+<button onclick="copyText('juejin-title')">Copy Title</button>
+<button onclick="copyText('juejin-summary')">Copy Summary</button>
+<a class="pub" href="https://juejin.cn/editor/drafts/new" target="_blank">Go Publish</a>
+</div>
+
+<!-- Dev.to -->
+<div class="card">
+<h2><span class="tag tag-devto">Dev.to</span></h2>
+<div class="copy-area" id="devto-title">Building a Personal Context System: How I Made AI Remember Who I Am</div>
+<div class="note">Title (above) / Summary (below)</div>
+<div class="copy-area" id="devto-summary" style="margin-top: 8px;">I built LifeClip — an open-source system that auto-captures your digital behavior (clipboard, browser, notes, AI chats) and generates a context.json file any AI can read. v0.3 introduces a two-stage insight pipeline: TF-IDF extracts structured topics, then a pluggable AI provider generates narratives. Everything runs locally with built-in PII filtering. TypeScript monorepo + Swift macOS app, GPL-3.0.</div>
+<div class="note">Tags: claudecode, opensource, productivity, typescript</div>
+<button onclick="copyText('devto-title')">Copy Title</button>
+<button onclick="copyText('devto-summary')">Copy Summary</button>
+<a class="pub" href="https://dev.to/new" target="_blank">Go Publish</a>
+</div>
+
+<script>
+function copyText(id) {
+  const el = document.getElementById(id);
+  navigator.clipboard.writeText(el.innerText);
+  const t = document.getElementById('toast');
+  t.style.display = 'block';
+  setTimeout(() => t.style.display = 'none', 1500);
+}
+// Show char counts for Twitter
+document.querySelectorAll('.char-count').forEach(el => {
+  const area = el.previousElementSibling;
+  if (area && area.id === 'twitter') {
+    const text = area.innerText;
+    let count = 0;
+    for (const ch of text) {
+      count += (ch.charCodeAt(0) > 127) ? 2 : 1;
+    }
+    // URLs count as 23 chars
+    const urls = text.match(/https?:\/\/\S+/g) || [];
+    for (const url of urls) {
+      let urlChars = 0;
+      for (const ch of url) urlChars += (ch.charCodeAt(0) > 127) ? 2 : 1;
+      count = count - urlChars + 23;
+    }
+    el.textContent = `${count} / 280 chars (estimated)`;
+    el.style.color = count > 280 ? '#e53e3e' : '#999';
+  }
+});
+</script>
+</body>
+</html>
