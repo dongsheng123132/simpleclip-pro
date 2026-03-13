@@ -76,6 +76,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         // 设置 Popover
         popover.contentSize = NSSize(width: 400, height: 600)
         popover.behavior = .transient
+        popover.animates = false  // 禁用动画防止 _NSWindowTransformAnimation 崩溃
 
         // 创建监听器与日报服务
         setupServices()
@@ -231,7 +232,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         // 左键切换 Popover
         if let button = statusItem?.button {
             if popover.isShown {
-                popover.performClose(nil)
+                popover.close()  // 使用 close() 替代 performClose 避免动画残留崩溃
             } else {
                 // 重建 contentViewController 防止长时间运行后窗口动画对象悬空
                 setupPopoverContent()
