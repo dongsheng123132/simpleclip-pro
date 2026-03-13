@@ -1,0 +1,13 @@
+{
+  "": {
+    "dependencies": "/Users/dosen8618607105700/claude/人生剪切日志/tools/lifeclip-ai-helper/.build/arm64-apple-macosx/release/lifeclip_ai_helper.build/lifeclip_ai_helper.d",
+    "object": "/Users/dosen8618607105700/claude/人生剪切日志/tools/lifeclip-ai-helper/.build/arm64-apple-macosx/release/lifeclip_ai_helper.build/lifeclip_ai_helper.o",
+    "swift-dependencies": "/Users/dosen8618607105700/claude/人生剪切日志/tools/lifeclip-ai-helper/.build/arm64-apple-macosx/release/lifeclip_ai_helper.build/master.swiftdeps"
+  },
+  "/Users/dosen8618607105700/claude/人生剪切日志/tools/lifeclip-ai-helper/Sources/main.swift": {
+    "object": "/Users/dosen8618607105700/claude/人生剪切日志/tools/lifeclip-ai-helper/.build/arm64-apple-macosx/release/lifeclip_ai_helper.build/main.swift.o",
+    "swiftmodule": "/Users/dosen8618607105700/claude/人生剪切日志/tools/lifeclip-ai-helper/.build/arm64-apple-macosx/release/lifeclip_ai_helper.build/main~partial.swiftmodule",
+    "swift-dependencies": "/Users/dosen8618607105700/claude/人生剪切日志/tools/lifeclip-ai-helper/.build/arm64-apple-macosx/release/lifeclip_ai_helper.build/main.swiftdeps",
+    "diagnostics": "/Users/dosen8618607105700/claude/人生剪切日志/tools/lifeclip-ai-helper/.build/arm64-apple-macosx/release/lifeclip_ai_helper.build/main.dia"
+  }
+}

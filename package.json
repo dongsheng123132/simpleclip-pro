@@ -1,0 +1,27 @@
+{
+  "name": "lifeclip",
+  "version": "0.1.0",
+  "description": "LifeClip — Personal Context Layer for the AI era. 100% local, privacy-first.",
+  "private": true,
+  "workspaces": [
+    "packages/shared",
+    "packages/browser-logger",
+    "packages/note-sync",
+    "packages/ai-chat-logger",
+    "packages/context-engine",
+    "packages/lifeclip-cli"
+  ],
+  "scripts": {
+    "build": "npx tsc -p packages/shared && npx tsc -p packages/browser-logger && npx tsc -p packages/note-sync && npx tsc -p packages/ai-chat-logger && npx tsc -p packages/context-engine && npx tsc -p packages/lifeclip-cli",
+    "test": "npm run build && node --test packages/shared/dist/__tests__/*.test.js packages/context-engine/dist/__tests__/*.test.js",
+    "clean": "rm -rf packages/*/dist"
+  },
+  "license": "GPL-3.0",
+  "engines": {
+    "node": ">=18"
+  },
+  "devDependencies": {
+    "@types/node": "^25.5.0",
+    "typescript": "^5.9.3"
+  }
+}

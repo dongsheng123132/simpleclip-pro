@@ -1,0 +1,15 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "outDir": "dist",
+    "rootDir": "src"
+  },
+  "include": ["src"],
+  "references": [
+    { "path": "../shared" },
+    { "path": "../browser-logger" },
+    { "path": "../note-sync" },
+    { "path": "../ai-chat-logger" },
+    { "path": "../context-engine" }
+  ]
+}

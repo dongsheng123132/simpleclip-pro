@@ -1,0 +1,15 @@
+{
+  "name": "@lifeclip/ai-chat-logger",
+  "version": "0.1.0",
+  "description": "AI conversation history collector for LifeClip",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsc",
+    "clean": "rm -rf dist"
+  },
+  "dependencies": {
+    "@lifeclip/shared": "0.1.0"
+  },
+  "license": "GPL-3.0"
+}

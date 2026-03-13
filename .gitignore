@@ -20,3 +20,11 @@ xcuserdata/
 # User-specific
 *.swp
 *.swo
+
+# Node
+node_modules/
+dist/
+*.tsbuildinfo
+
+# LifeClip runtime
+.lifeclip/

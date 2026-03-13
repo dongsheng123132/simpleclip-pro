@@ -1,257 +1,361 @@
-<p align="center">
-  <h1 align="center">SimpleClip</h1>
-  <p align="center"><b>Your Personal Work Memory Bank</b></p>
-  <p align="center">
-    <img src="https://img.shields.io/badge/platform-macOS%2014%2B-blue" alt="macOS 14+"/>
-    <img src="https://img.shields.io/badge/swift-5.9-orange" alt="Swift 5.9"/>
-    <img src="https://img.shields.io/badge/license-GPL--3.0-green" alt="GPL-3.0"/>
-    <img src="https://img.shields.io/badge/AI-100%25%20Local-purple" alt="100% Local AI"/>
-  </p>
-</p>
+# LifeClip
+
+> **Personal Context System for the AI Era**
+>
+> AI doesn't know who you are. LifeClip fixes that — it auto-captures your digital behavior and generates AI-readable personal context. 100% local, zero network requests.
 
 ---
 
-[English](#english) | [中文](#中文)
+## Why LifeClip?
 
----
+Every AI tool starts from zero — no memory of what you've been working on, what you care about, or what your day looks like. LifeClip bridges that gap:
 
-<a id="english"></a>
+1. **Captures** your digital behavior across clipboard, browser, notes, and AI chats
+2. **Extracts** topics and patterns using TF-IDF (no LLM required)
+3. **Generates** `~/.lifeclip/context.json` — a personal context file any AI can read
 
-## English
+Think of it as **personal infrastructure for AI** — like `.gitconfig` for your identity, but for your context.
 
-### Not Just a Clipboard Manager
+## Key Features
 
-Every day, you copy and paste dozens — maybe hundreds — of things: code snippets, API keys, URLs, design feedback, meeting notes, error logs. Most clipboard managers treat them as disposable. **SimpleClip treats them as your work memory.**
+### AI Life Timeline
 
-Think about it: your clipboard is a stream of everything you've touched throughout the day. SimpleClip captures that stream, stores it permanently, and uses on-device AI to turn it into a daily digest — a summary of what you actually worked on, not what your calendar says you did.
-
-**No cloud. No tokens. No subscription. Everything stays on your Mac.**
-
-> Clipboard in, memory out. That's SimpleClip.
-
-### Features
-
-- **Unlimited History** — Powered by SwiftData, handles 100,000+ records without lag
-- **Smart Deduplication** — SHA256 hash-based, automatically skips duplicate content
-- **Image Support** — Auto-saves copied images with thumbnail previews
-- **Local AI Daily Digest** — Auto-generates clipboard content summaries (Apple Intelligence on macOS 26+ / NaturalLanguage fallback)
-- **PII Filtering** — Automatically redacts personal names, emails, phone numbers before AI processing
-- **Global Hotkey** — `Cmd+Shift+V` for instant access
-- **Memory Bank Manager** — Three-pane management UI with search, filter, and batch operations
-- **100% Local** — Zero network requests, zero data uploads, fully offline
-- **Menu Bar App** — Lives in your menu bar, no Dock icon
-
-### System Requirements
-
-| Feature | Minimum |
-|---------|---------|
-| Core | macOS 14.0+ (Sonoma) |
-| Full AI Digest | macOS 26.0+ / macOS 14.0+ (keyword extraction fallback) |
-| Architecture | Apple Silicon (ARM64) / Intel (x86_64) |
-
-### Installation
-
-#### Option 1: Homebrew (Recommended)
+Auto-generates "what you did today", grouped by hour with topic labels.
 
 ```bash
-brew tap dongsheng123132/tap
-brew install --cask simpleclip
+npx lifeclip timeline
 ```
 
-Auto-downloads, installs, and handles macOS security — no manual steps needed. Update with `brew upgrade --cask simpleclip`.
+```
+# 2026-03-13 人生时间线
 
-#### Option 2: One-Line Install Script
-
-```bash
-curl -fsSL https://raw.githubusercontent.com/dongsheng123132/simpleclip-pro/main/install.sh | bash
+## 10:00 - 11:00 | AI Research
+- 10:12 📋 复制 GPT Prompt (clipboard)
+- 10:18 🌐 浏览 arxiv.org/abs/2026... (browser)
+- 10:35 🤖 Claude Code: "设计 LifeClip 架构" (ai_chat)
+- 10:40 📝 修改 Obsidian: AI-Context-System.md (note)
 ```
 
-Auto-downloads latest DMG, installs to /Applications, removes quarantine, and launches.
+### Two-Stage Insight Pipeline (v0.3)
 
-#### Option 3: Manual Download
+A unique two-stage architecture for generating daily/weekly insights:
 
-1. Go to the [Releases](../../releases) page
-2. Download the latest `SimpleClip-vX.X.X.dmg`
-3. Open the DMG and drag SimpleClip to your Applications folder
-4. **First launch**: Run `xattr -cr /Applications/SimpleClip.app` in Terminal (the app is not code-signed)
+| Stage | What it does | Engine |
+|-------|-------------|--------|
+| **Stage 1: Extraction** | TF-IDF topic extraction → `StructuredInsights` JSON | Pure TypeScript |
+| **Stage 2: Summarization** | Human-readable narrative from structured data | Pluggable AI provider |
 
-#### Option 4: Build from Source
+Three AI providers available:
+
+| Provider | How it works | Requirements |
+|----------|-------------|-------------|
+| `tfidf` (default) | Pure local TF-IDF, zero dependencies | Node.js 18+ |
+| `apple-ai` | Apple Intelligence via Swift helper binary | macOS 26+, Xcode |
+| `claude-api` | Claude API for high-quality summaries | API key |
 
 ```bash
+npx lifeclip insights --date 2026-03-13
+npx lifeclip insights --week
+```
+
+### Context Graph
+
+All behavior auto-classified into topics, forming a personal context graph.
+
+```bash
+npx lifeclip graph
+```
+
+```
+Your Life Context Graph (last 30 days)
+
+AI Agent          ████████████████████  42 events
+  📋 15  🌐 12  📝 8  🤖 7
+LifeClip          ████████████████     35 events
+ESP32             ████████             18 events
+```
+
+### Personal Context API
+
+The core differentiator — outputs `~/.lifeclip/context.json` that any AI tool can read:
+
+```bash
+npx lifeclip context --show
+```
+
+```json
+{
+  "recentTopics": [{"name": "AI Agent", "weight": 42}],
+  "activeProjects": ["LifeClip", "AirKey"],
+  "summary": "过去30天主要关注: AI Agent、LifeClip、ESP32"
+}
+```
+
+Feed this to Claude, GPT, or any AI assistant to give it instant personal context.
+
+## Quick Start
+
+```bash
+# Clone & install
 git clone https://github.com/dongsheng123132/simpleclip-pro.git
 cd simpleclip-pro
-xcodebuild -project SimpleClip.xcodeproj -scheme SimpleClip build
-open build/Build/Products/Debug/SimpleClip.app
+npm install && npm run build
+
+# Collect data from all sources
+npx lifeclip collect
+
+# View your day
+npx lifeclip timeline
+
+# Generate insights
+npx lifeclip insights
+
+# Generate AI-readable context
+npx lifeclip context
 ```
 
-### Usage
+## Architecture
 
-| Action | How |
-|--------|-----|
-| Show/Hide | `Cmd + Shift + V` or click menu bar icon |
-| Copy item | Click any item |
-| Copy & Paste | Double-click item (requires Accessibility permission) |
-| Open Manager | Right-click menu bar icon → "Open Manager" |
-| Quit | Right-click menu bar icon → "Quit SimpleClip" |
+```
+lifeclip/
+├── packages/
+│   ├── shared/               # LifeClipEvent type + JSONL storage + PII filter + config
+│   ├── clipboard-logger/     # macOS clipboard capture (Swift + SwiftData)
+│   ├── browser-logger/       # Chrome & Safari history extraction (SQLite)
+│   ├── note-sync/            # Obsidian vault change detection
+│   ├── ai-chat-logger/       # Claude Code session parsing (JSONL)
+│   ├── context-engine/       # TF-IDF + insight pipeline + 3 AI providers
+│   └── lifeclip-cli/         # CLI: collect, timeline, graph, context, insights
+├── SimpleClip/               # Swift macOS clipboard app source
+├── SimpleClip.xcodeproj/     # Xcode project
+└── tools/                    # Swift helper binaries (Apple Intelligence)
+```
 
-### Privacy & PII Protection
+**Data flow:**
 
-SimpleClip is built on a simple principle: **your work memory belongs to you, not the cloud.**
+```
+Sources (clipboard/browser/notes/AI) → LifeClipEvent JSONL
+    → TF-IDF topic extraction → StructuredInsights
+    → AI provider → Human-readable report
+    → context.json (for any AI to read)
+```
 
-- All data stored in on-device SwiftData database
-- AI analysis runs entirely on-device (Apple Intelligence / NaturalLanguage)
-- **PII auto-redaction**: Personal names, emails, phone numbers, and addresses are automatically stripped before AI processing — even the local AI only sees sanitized content
-- Zero network requests, zero telemetry, zero data uploads
-- App Sandbox enabled — the app can't access anything outside its container
-
-### Contributing
-
-PRs and Issues welcome!
-
-1. Fork this repo
-2. Create your feature branch (`git checkout -b feature/amazing-feature`)
-3. Commit your changes (`git commit -m 'Add amazing feature'`)
-4. Push to the branch (`git push origin feature/amazing-feature`)
-5. Open a Pull Request
-
----
-
-<a id="中文"></a>
-
-## 中文
-
-### 不只是剪贴板管理器
-
-每天你复制粘贴几十甚至上百次：代码片段、API Key、URL、设计反馈、会议笔记、报错日志。大多数剪贴板工具把它们当作用完即弃的临时数据。**SimpleClip 把它们当作你的工作记忆。**
-
-想想看——你的剪贴板就是你一天工作的信息流。SimpleClip 捕获这条信息流，永久保存，然后用本地 AI 把它变成每日工作摘要——一份关于你**真正做了什么**的总结，而不是日历上写了什么。
-
-**不走云端。不烧 token。不收订阅费。一切都在你的 Mac 上。**
-
-> 剪贴板进，记忆出。这就是 SimpleClip。
-
-### 功能特性
-
-- **无限历史记录** — 基于 SwiftData，支持 10 万+ 条记录无卡顿
-- **智能去重** — SHA256 哈希自动跳过重复内容
-- **图片支持** — 自动保存复制的图片，缩略图预览
-- **本地 AI 日报** — 每日自动生成剪贴板内容摘要（macOS 26+ Apple Intelligence / 低版本 NaturalLanguage 降级）
-- **PII 隐私过滤** — AI 处理前自动脱敏个人姓名、邮箱、电话号码等敏感信息
-- **全局快捷键** — `Cmd+Shift+V` 快速呼出
-- **记忆库管理器** — 三栏管理界面，搜索、筛选、批量管理
-- **100% 本地** — 无网络请求，无数据上传，完全离线运行
-- **菜单栏应用** — 不占 Dock 位置，常驻菜单栏
-
-### 系统要求
-
-| 功能 | 最低要求 |
-|------|----------|
-| 基础功能 | macOS 14.0+ (Sonoma) |
-| AI 智能日报 | macOS 26.0+ (完整功能) / macOS 14.0+ (关键词提取降级) |
-| 架构 | Apple Silicon (ARM64) / Intel (x86_64) |
-
-### 安装
-
-#### 方式一：Homebrew（推荐）
+## CLI Reference
 
 ```bash
-brew tap dongsheng123132/tap
-brew install --cask simpleclip
+# Data collection
+lifeclip collect                    # Collect from all sources
+lifeclip collect --source browser   # Browser only
+lifeclip collect --since 2026-03-01 # Backfill history
+
+# Timeline
+lifeclip timeline                   # Today's timeline
+lifeclip timeline --week            # This week
+
+# Context graph
+lifeclip graph                      # Topic graph (30d)
+lifeclip graph --period 7d          # Last 7 days
+
+# Insights (v0.3)
+lifeclip insights                   # Today's insights
+lifeclip insights --date 2026-03-13 # Specific date
+lifeclip insights --week            # Weekly insights
+
+# Context API
+lifeclip context                    # Generate context.json
+lifeclip context --show             # View current context
+
+# Configuration
+lifeclip config                     # Show current config
+lifeclip config --set insights.provider=claude-api
+lifeclip config --set insights.apiKey=sk-...
+
+# Reports & status
+lifeclip report                     # Daily report (Markdown)
+lifeclip status                     # Data statistics
 ```
 
-自动下载、安装、处理 macOS 安全限制，无需手动操作。更新：`brew upgrade --cask simpleclip`
-
-#### 方式二：一键安装脚本
+## Configuration
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/dongsheng123132/simpleclip-pro/main/install.sh | bash
+# View config
+npx lifeclip config
+
+# Switch AI provider
+npx lifeclip config --set insights.provider=apple-ai
+npx lifeclip config --set insights.provider=claude-api
+npx lifeclip config --set insights.apiKey=sk-ant-...
+
+# Adjust PII level
+npx lifeclip config --set pii.level=strict   # Redact paths + URL params
+npx lifeclip config --set pii.level=standard # Email, phone, card, IP
+npx lifeclip config --set pii.level=off      # No redaction
 ```
 
-自动下载最新 DMG、安装到 /Applications、去除隔离标记并启动。
+Config file: `~/.lifeclip/config.json`
 
-#### 方式三：手动下载
+## Privacy & Security
 
-1. 前往 [Releases](../../releases) 页面
-2. 下载最新的 `SimpleClip-vX.X.X.dmg`
-3. 打开 DMG，拖拽 SimpleClip 到应用程序文件夹
-4. **首次打开**：终端运行 `xattr -cr /Applications/SimpleClip.app`（应用未签名，需手动解除限制）
+- **100% Local** — zero network requests (unless you opt into `claude-api` provider)
+- **PII Filter** — auto-redacts emails, phone numbers, credit cards, API keys, IP addresses
+- **Content Truncation** — only first 200-500 chars stored, never full content
+- **Your Data** — everything in `~/.lifeclip/`, delete anytime
 
-#### 方式四：从源码构建
+## Data Format
 
-```bash
-git clone https://github.com/dongsheng123132/simpleclip-pro.git
-cd simpleclip-pro
-xcodebuild -project SimpleClip.xcodeproj -scheme SimpleClip build
-open build/Build/Products/Debug/SimpleClip.app
+All events use the unified JSONL format (one file per day):
+
+```json
+{"id":"uuid","source":"clipboard","type":"text","timestamp":"2026-03-13T10:12:00Z","content":"...","contentHash":"sha256","tags":["dev"],"topic":"AI Agent"}
 ```
 
-### 使用方法
+Storage locations:
+- Events: `~/.lifeclip/events/YYYY-MM-DD.jsonl`
+- Graph: `~/.lifeclip/graph.json`
+- Context: `~/.lifeclip/context.json`
+- Config: `~/.lifeclip/config.json`
 
-| 操作 | 方式 |
-|------|------|
-| 呼出/隐藏 | `Cmd + Shift + V` 或点击菜单栏图标 |
-| 复制条目 | 点击任意条目 |
-| 复制并粘贴 | 双击条目（需辅助功能权限） |
-| 打开管理器 | 右键菜单栏图标 → 「打开管理界面」 |
-| 退出应用 | 右键菜单栏图标 → 「退出 SimpleClip」 |
+Human-readable, greppable, no database lock.
 
-### 隐私 & PII 保护
+## Requirements
 
-SimpleClip 的设计原则很简单：**你的工作记忆属于你，不属于云端。**
+- **Node.js 18+** (for CLI and data processing)
+- **macOS 14.0+** (for clipboard logger Swift app)
+- **macOS 26.0+** (optional, for Apple Intelligence insights)
+- Chrome and/or Safari (for browser history)
+- Obsidian (optional, for note sync)
 
-- 所有数据存储在本机 SwiftData 数据库中
-- AI 分析完全在设备端运行（Apple Intelligence / NaturalLanguage）
-- **PII 自动脱敏**：个人姓名、邮箱、电话、地址在 AI 处理前自动过滤——即使是本地 AI 也只看到脱敏后的内容
-- 无网络请求，无遥测，无数据上传
-- App Sandbox 已启用——应用无法访问容器外的任何内容
+## Contributing
 
-### 贡献
+1. Fork the repo
+2. Create a feature branch (`git checkout -b feature/amazing`)
+3. Run tests: `npm test`
+4. Submit a PR
 
-欢迎 PR 和 Issue！
-
-1. Fork 本仓库
-2. 创建特性分支 (`git checkout -b feature/amazing-feature`)
-3. 提交修改 (`git commit -m 'Add amazing feature'`)
-4. 推送分支 (`git push origin feature/amazing-feature`)
-5. 创建 Pull Request
-
----
-
-## Tech Stack / 技术栈
-
-- **Language**: Swift
-- **UI**: SwiftUI
-- **Data**: SwiftData
-- **AI**: FoundationModels (macOS 26+) / NaturalLanguage (fallback)
-- **Architecture**: Menu Bar App (LSUIElement)
-
-## License / 许可证
+## License
 
 [GPL-3.0](LICENSE)
 
-You can freely use, modify, and distribute. Modified versions must also be open-sourced.
-
-你可以自由使用、修改和分发。修改后的版本也必须开源。
-
-## Vision / 愿景
-
-The future of personal productivity tools is **local-first AI**. Sensitive data stays on your device; only when you need cloud-level intelligence do you opt in — and even then, PII gets filtered first.
-
-SimpleClip is an early step toward that future: a tool that remembers everything you've worked on, understands the patterns, and keeps your privacy intact.
-
-个人效率工具的未来是**本地优先的 AI**。敏感数据留在设备上；只有当你需要云端级别的智能时才主动选择——即便如此，PII 也会先被过滤。
-
-SimpleClip 是迈向这个未来的早期一步：一个记住你所有工作内容、理解其中规律、同时守住隐私的工具。
-
-## Roadmap / 未来计划
-
-- [ ] App Store release (SimpleClip Pro) / App Store 上架
-- [ ] iCloud Sync / iCloud 同步
-- [ ] Deep work pattern analysis / 深度工作模式分析
-- [ ] Cross-app context awareness / 跨应用上下文感知
-- [ ] Custom hotkeys / 自定义快捷键
-- [ ] Plugin system / 插件系统
-
 ---
 
-**Built with Swift & SwiftUI. Powered by on-device AI.**
+# 中文文档
+
+## LifeClip — AI 时代的人生上下文系统
+
+> 你的 AI 助手不了解你。LifeClip 让它了解。
+
+LifeClip 是一个开源的**个人上下文系统** —— 自动记录你的数字行为（剪贴板、浏览器、笔记、AI 对话），生成 AI 可理解的个人上下文。
+
+**100% 本地处理，零网络请求，完全隐私。**
+
+## 为什么需要 LifeClip？
+
+每个 AI 工具都从零开始 —— 不知道你在做什么、关心什么、今天经历了什么。LifeClip 解决这个问题：
+
+1. **采集** 剪贴板、浏览器历史、Obsidian 笔记、Claude Code 对话
+2. **提取** 主题和模式（TF-IDF，无需 LLM）
+3. **生成** `~/.lifeclip/context.json` —— 一份任何 AI 都能读的个人上下文
+
+## v0.3 亮点
+
+### 两级洞察管线
+
+独特的两阶段架构：
+
+| 阶段 | 作用 | 引擎 |
+|------|------|------|
+| **第一阶段：提取** | TF-IDF 主题提取 → `StructuredInsights` JSON | 纯 TypeScript |
+| **第二阶段：总结** | 结构化数据 → 人类可读叙述 | 可插拔 AI 提供者 |
+
+### 3 个 AI 提供者
+
+| 提供者 | 原理 | 要求 |
+|--------|------|------|
+| `tfidf`（默认） | 纯本地 TF-IDF，零依赖 | Node.js 18+ |
+| `apple-ai` | 通过 Swift Helper 调用 Apple Intelligence | macOS 26+, Xcode |
+| `claude-api` | Claude API 生成高质量总结 | API Key |
+
+### 核心差异化：Personal Context API
+
+输出 `~/.lifeclip/context.json`，喂给任何 AI 助手，让它秒懂你：
+
+```json
+{
+  "recentTopics": [{"name": "AI Agent", "weight": 42}],
+  "activeProjects": ["LifeClip", "AirKey"],
+  "summary": "过去30天主要关注: AI Agent、LifeClip、ESP32"
+}
+```
+
+## 快速开始
+
+```bash
+# 克隆 & 安装
+git clone https://github.com/dongsheng123132/simpleclip-pro.git
+cd simpleclip-pro
+npm install && npm run build
+
+# 采集数据
+npx lifeclip collect
+
+# 查看今日时间线
+npx lifeclip timeline
+
+# 生成洞察
+npx lifeclip insights
+
+# 生成 AI 可读上下文
+npx lifeclip context
+```
+
+## 数据源
+
+| 来源 | 采集内容 | 方式 |
+|------|----------|------|
+| 📋 剪贴板 | 文本、URL、图片 | macOS 原生应用 (Swift) |
+| 🌐 浏览器 | Chrome & Safari 历史 | SQLite 数据库复制 |
+| 📝 笔记 | Obsidian 笔记变更 | 文件系统扫描 |
+| 🤖 AI 对话 | Claude Code 会话 | JSONL 解析 |
+
+## CLI 命令
+
+```bash
+lifeclip collect                    # 采集所有来源
+lifeclip collect --source browser   # 仅浏览器
+lifeclip collect --since 2026-03-01 # 回填历史
+
+lifeclip timeline                   # 今日时间线
+lifeclip timeline --week            # 本周时间线
+
+lifeclip graph                      # 主题图谱（30天）
+lifeclip graph --period 7d          # 最近7天
+
+lifeclip insights                   # 今日洞察
+lifeclip insights --week            # 周度洞察
+
+lifeclip context                    # 生成 context.json
+lifeclip context --show             # 查看当前上下文
+
+lifeclip config                     # 查看配置
+lifeclip report                     # 日报（Markdown）
+lifeclip status                     # 数据统计
+```
+
+## 隐私 & 安全
+
+- 🔒 **100% 本地** — 零网络请求（除非主动选择 `claude-api`）
+- 🛡️ **PII 过滤** — 自动脱敏邮箱、手机号、信用卡、API Key、IP 地址
+- 📝 **内容截断** — 仅存储前 200-500 字符，绝不存完整内容
+- 📂 **数据自主** — 所有数据在 `~/.lifeclip/`，随时可删
+
+## 技术栈
+
+- **Swift + SwiftData** — 剪贴板监控（macOS 14+）
+- **TypeScript** — 数据处理（Node.js 18+）
+- **JSONL** — 存储格式（人类可读，Git 友好）
+- **TF-IDF** — 主题提取（纯 TS，无需 LLM）
+- **npm workspaces** — Monorepo 管理
+
+## 开源协议
+
+[GPL-3.0](LICENSE)
