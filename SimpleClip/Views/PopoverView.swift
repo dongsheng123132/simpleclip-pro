@@ -13,13 +13,6 @@ struct PopoverView: View {
     
     var onOpenManager: ((String?) -> Void)?
     
-    /// 高频复制（copyCount >= 3，按次数降序）
-    var frequentItems: [ClipboardItem] {
-        allItems.filter { !$0.isPinned && $0.copyCount >= 3 }
-            .sorted { $0.copyCount > $1.copyCount }
-            .prefix(10)
-            .map { $0 }
-    }
 
     var filteredItems: [ClipboardItem] {
         let limitedItems = Array(allItems.prefix(200))
@@ -130,40 +123,6 @@ struct PopoverView: View {
             } else {
                 ScrollView {
                     LazyVStack(spacing: 0) {
-                        // 高频复制板块（copyCount >= 3）
-                        if searchText.isEmpty && !frequentItems.isEmpty {
-                            HStack {
-                                Image(systemName: "flame.fill")
-                                    .foregroundColor(.orange)
-                                    .font(.caption)
-                                Text(NSLocalizedString("高频复制", comment: ""))
-                                    .font(.caption)
-                                    .foregroundColor(.secondary)
-                                Spacer()
-                            }
-                            .padding(.horizontal, 16)
-                            .padding(.vertical, 6)
-                            .background(Color.orange.opacity(0.06))
-
-                            ForEach(frequentItems) { item in
-                                HStack(spacing: 0) {
-                                    HistoryItemView(
-                                        item: item,
-                                        monitor: monitor,
-                                        isSelected: selectedItemId == item.id,
-                                        onSelect: { selectedItemId = item.id },
-                                        onCopy: { copyItem(item) }
-                                    )
-                                    Text("×\(item.copyCount)")
-                                        .font(.caption2)
-                                        .fontWeight(.bold)
-                                        .foregroundColor(.orange)
-                                        .padding(.trailing, 12)
-                                }
-                                Divider()
-                            }
-                        }
-
                         ForEach(filteredItems) { item in
                             HistoryItemView(
                                 item: item,

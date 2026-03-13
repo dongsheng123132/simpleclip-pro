@@ -42,6 +42,8 @@ struct ClipboardManagerView: View {
             byCategory = items.filter { $0.type == .text }
         case "pinned":
             byCategory = items.filter { $0.isPinned }
+        case "frequent":
+            byCategory = items.filter { $0.copyCount >= 3 }.sorted { $0.copyCount > $1.copyCount }
         default:
             byCategory = items
         }
@@ -72,6 +74,7 @@ struct ClipboardManagerView: View {
                 }
                 Section("收藏") {
                     Label("固定", systemImage: "star.fill").tag("pinned")
+                    Label("高频复制", systemImage: "flame.fill").tag("frequent")
                 }
             }
             .listStyle(.sidebar)
@@ -153,6 +156,14 @@ struct SimpleListRow: View {
                 .lineLimit(2)
                 .font(.system(size: 13))
                 .frame(maxWidth: .infinity, alignment: .leading)
+
+            // 复制次数
+            if item.copyCount > 1 {
+                Text("×\(item.copyCount)")
+                    .font(.caption2)
+                    .fontWeight(.bold)
+                    .foregroundColor(.orange)
+            }
 
             // 时间
             Text(item.timeAgo)
@@ -253,6 +264,16 @@ struct SimpleDetailView: View {
                 Text(item.timestamp, style: .time)
                     .font(.caption)
                     .foregroundColor(.secondary)
+                if item.copyCount > 1 {
+                    Text("×\(item.copyCount)")
+                        .font(.caption)
+                        .fontWeight(.medium)
+                        .foregroundColor(.orange)
+                        .padding(.horizontal, 6)
+                        .padding(.vertical, 2)
+                        .background(Color.orange.opacity(0.1))
+                        .cornerRadius(4)
+                }
                 Spacer()
                 Button(role: .destructive, action: onDelete) {
                     Image(systemName: "trash")
