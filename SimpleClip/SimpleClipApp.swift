@@ -24,6 +24,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     var managerWindow: NSWindow?
     var monitor: ClipboardMonitor?
     var summaryService: DailySummaryService?
+    var lifeClipExporter: LifeClipExporter?
     var eventMonitor: Any?
     var container: ModelContainer?
     var dailyDigestTimer: Timer?
@@ -97,9 +98,22 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         ) { [weak self] _ in
             guard let self else { return }
             Task { @MainActor [weak self] in
-                self?.dailyDigestTimer?.invalidate()
-                self?.dailyDigestTimer = nil
-                self?.scheduleDailyDigestTimer()
+                guard let self else { return }
+                self.dailyDigestTimer?.invalidate()
+                self.dailyDigestTimer = nil
+                self.scheduleDailyDigestTimer()
+
+                // Toggle LifeClip export based on setting
+                let exportEnabled = UserDefaults.standard.bool(forKey: "lifeClipExportEnabled")
+                if exportEnabled && self.lifeClipExporter == nil {
+                    if let context = self.container?.mainContext {
+                        self.lifeClipExporter = LifeClipExporter(modelContext: context)
+                        self.lifeClipExporter?.startExporting()
+                    }
+                } else if !exportEnabled && self.lifeClipExporter != nil {
+                    self.lifeClipExporter?.stopExporting()
+                    self.lifeClipExporter = nil
+                }
             }
         }
 
@@ -153,6 +167,12 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         monitor = ClipboardMonitor(modelContext: context)
         monitor?.startMonitoring()
         summaryService = DailySummaryService(modelContext: context)
+
+        // LifeClip Export (optional, controlled by user preference)
+        if UserDefaults.standard.bool(forKey: "lifeClipExportEnabled") {
+            lifeClipExporter = LifeClipExporter(modelContext: context)
+            lifeClipExporter?.startExporting()
+        }
     }
     
     private func setupPopoverContent() {
@@ -348,6 +368,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
 
     func applicationWillTerminate(_ notification: Notification) {
         monitor?.stopMonitoring()
+        lifeClipExporter?.stopExporting()
         dailyDigestTimer?.invalidate()
         dailyDigestTimer = nil
     }

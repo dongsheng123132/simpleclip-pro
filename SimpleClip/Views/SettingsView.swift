@@ -4,6 +4,7 @@ struct SettingsView: View {
     @AppStorage("autoPaste") private var autoPaste = true
     @AppStorage("dailyDigestEnabled") private var dailyDigestEnabled = true
     @AppStorage("dailyDigestHour") private var dailyDigestHour = 22
+    @AppStorage("lifeClipExportEnabled") private var lifeClipExportEnabled = false
     @ObservedObject var monitor: ClipboardMonitor
     @Environment(\.dismiss) private var dismiss
 
@@ -29,6 +30,11 @@ struct SettingsView: View {
                         }
                         .pickerStyle(.menu)
                     }
+                }
+
+                Section(header: Text("LifeClip")) {
+                    Toggle(NSLocalizedString("导出到 LifeClip", comment: ""), isOn: $lifeClipExportEnabled)
+                        .help(NSLocalizedString("将剪贴板事件导出到 ~/.lifeclip/events/ 供 LifeClip CLI 分析", comment: ""))
                 }
 
                 Section {
@@ -64,7 +70,7 @@ struct SettingsView: View {
             .keyboardShortcut(.defaultAction)
         }
         .padding()
-        .frame(width: 300, height: 280)
+        .frame(width: 300, height: 360)
     }
 
     private func timeLabel(hour: Int) -> String {
