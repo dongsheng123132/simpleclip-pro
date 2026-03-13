@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<rss version="2.0" xmlns:sparkle="http://www.andymatuschak.org/xml-namespaces/sparkle" xmlns:dc="http://purl.org/dc/elements/1.1/">
+  <channel>
+    <title>SimpleClip Updates</title>
+    <link>https://dongsheng123132.github.io/simpleclip-pro/appcast.xml</link>
+    <item>
+      <title>Version 1.4.5</title>
+      <pubDate>Fri, 13 Mar 2026 08:45:35 +0000</pubDate>
+      <sparkle:version>1.4.5</sparkle:version>
+      <sparkle:shortVersionString>1.4.5</sparkle:shortVersionString>
+      <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
+      <enclosure url="https://github.com/dongsheng123132/simpleclip-pro/releases/download/v1.4.5/SimpleClip-v1.4.5.dmg"
+                 sparkle:edSignature="kjTMvrGpcm/vGsZm09WWQYZK5w/FWrkKdH7gv51rBKMUFTrABik9lyi1uiHfeRdzQFg8NYUvyeqojIk4+itXBQ==" length="2321407"
+                 type="application/octet-stream"/>
+    </item>
+  </channel>
+</rss>
